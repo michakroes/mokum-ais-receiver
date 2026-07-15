@@ -233,7 +233,7 @@ body.dark .dt-close{color:#fff;background:rgba(255,255,255,.14)}
   .stat .big{font-size:18px;margin-top:2px}
   .stat .sub{display:none}                 /* sub-labels weg = korter */
   .hm{display:none}                        /* Gedecodeerd/Bytes/Fouten verbergen op mobiel */
-  .tbl-wrap{max-height:none}
+  .tbl-wrap{max-height:177px}              /* mobiel: ~5 schepen zichtbaar, rest scrollt (header 27 + 5x30) */
   .fixlog{display:none}                    /* ruwe NMEA-feed verbergen op mobiel */
 }
 @media(max-width:480px){

@@ -11,15 +11,23 @@ Pi: serve.py (:8801) --/state--> cloud-push.py --POST /api/ingest--> Netlify Blo
 
 ## 1. Repo naar GitHub
 
+De repo is **`michakroes/mokum-ais-receiver`** (PUBLIC, persoonlijk account
+michakroes) en staat lokaal in `~/Downloads/matsutec`. Bestaat al; opnieuw
+opzetten zou zijn:
+
 ```sh
-cd ~/Downloads/matsutec-dashboard
-gh repo create matsutec-dashboard --private --source=. --remote=origin --push
+cd ~/Downloads/matsutec
+gh repo create mokum-ais-receiver --public --source=. --remote=origin --push
 ```
 (of maak handmatig een repo aan en `git push -u origin main`)
 
+Let op: `station/`, `.env.local`, `.cloud-push.env`, `public/config.js`,
+`CLAUDE.md` en `.claude/` zijn gitignored - de publieke repo blijft puur het
+dashboard, zonder secrets of Pi-scripts.
+
 ## 2. Netlify-site aan de repo koppelen
 
-- Netlify -> Add new site -> Import from Git -> kies `matsutec-dashboard`.
+- Netlify -> Add new site -> Import from Git -> kies `mokum-ais-receiver`.
 - Build settings worden uit `netlify.toml` gelezen (command `node build-config.mjs`,
   publish `public`, functions `netlify/functions`). Niks aan te passen.
 - Deploy. Je krijgt een URL zoals `https://<naam>.netlify.app`.
@@ -28,9 +36,11 @@ gh repo create matsutec-dashboard --private --source=. --remote=origin --push
 
 | Var | Waarde |
 |---|---|
-| `AIS_PUSH_KEY` | lang willekeurig geheim, genereer met `openssl rand -hex 24` |
+| `AIS_PUSH_KEY` | lang willekeurig geheim, genereer met `openssl rand -hex 24` (moet gelijk zijn aan de Pi) |
 | `GMAPS_KEY` | je Google Maps browser-key (uit `matsutec/.env.local`) |
 | `GMAPS_ID` | je Google Maps Map ID (uit `matsutec/.env.local`) |
+| `MOKUM_READ_KEY` | READ-key voor mokum-radar (`vessel`-function proxy'd hiermee de schip-detail-API) |
+| `VESSEL_MAX_AGE_H` | optioneel, default 12 - schepen ouder dan X uur weglaten in `state` |
 
 Na het zetten: **Trigger deploy** (Deploys -> Trigger deploy) zodat `config.js`
 met de GMAPS-waarden opnieuw gegenereerd wordt.

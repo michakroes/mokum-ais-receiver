@@ -13,21 +13,23 @@ toont kaart + schepenlijst + ruwe feed, bereikbaar van overal.
 
 Deployen + Pi-installatie: zie [DEPLOY.md](DEPLOY.md).
 
-## Lokaal testen (localhost:8888)
+## Lokaal testen (snel - localhost:8899)
 
-Frontend testen met echte data zonder te deployen. Vereist `netlify` CLI en de vars
-`GMAPS_KEY` / `GMAPS_ID` / `AIS_PUSH_KEY` in `matsutec/.env.local` (override met
-`ENV_FILE=/pad/.env.local`). Draait `netlify dev --offline` (dus puur die lokale env,
-niet de remote) + een feeder die `/api/ingest` voedt:
+Frontend testen zonder te deployen. Het lichte Python-servertje start in ~ms (geen
+`netlify dev`) en serveert de echte `index.html` + `config.js` (GMAPS uit `.env.local`):
 
 ```sh
-./dev/localtest.sh          # feeder leest de LIVE Pi (mokum-ais.local:8801)
-./dev/localtest.sh sample   # feeder pompt dev/sample-state.json (Pi niet nodig)
+python3 dev/localserve.py          # /api/state = dev/sample-state.json (Pi/cloud niet nodig)
+python3 dev/localserve.py pi       # /api/state = live Pi  (mokum-ais.local:8801)
+python3 dev/localserve.py cloud    # /api/state = live Netlify-site
 ```
 
-Open daarna http://localhost:8888. Frontend aanpassen -> refresh -> zien. Ctrl+C stopt
-alles. De kaart werkt lokaal als je Maps-key `http://localhost:8888/*` (of localhost)
-toestaat in de referrer-lijst.
+Open http://localhost:8899 (poort via `PORT=...`, env-bestand via `ENV_FILE=...`).
+Frontend aanpassen -> refresh -> zien. De kaart werkt lokaal als je Maps-key
+`http://localhost:8899/*` toestaat in de referrer-lijst.
+
+Alleen als je de Functions/ingest zelf moet testen is er `./dev/localtest.sh`
+(= `netlify dev --offline` + feeder, op :8888) - maar dat is traag.
 
 Het onderliggende station (AR-10 -> `ais-forward` -> AIS Friends + AISHub + lokaal
 dashboard) leeft in het aparte `matsutec`-project op de Pi.

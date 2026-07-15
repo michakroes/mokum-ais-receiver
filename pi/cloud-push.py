@@ -15,7 +15,7 @@ import os, sys, time, urllib.request, urllib.error
 LOCAL = os.environ.get("LOCAL_STATE_URL", "http://127.0.0.1:8801/state")
 CLOUD = os.environ.get("CLOUD_INGEST_URL", "").strip()
 KEY = os.environ.get("AIS_PUSH_KEY", "").strip()
-INTERVAL = float(os.environ.get("PUSH_INTERVAL", "4"))
+INTERVAL = float(os.environ.get("PUSH_INTERVAL", "6"))
 
 if not CLOUD or not KEY:
     print("FOUT: CLOUD_INGEST_URL en AIS_PUSH_KEY moeten gezet zijn (zie .cloud-push.env)", file=sys.stderr)
@@ -25,7 +25,8 @@ print(f"[push] {LOCAL} -> {CLOUD} elke {INTERVAL}s", flush=True)
 
 ok = 0
 fail = 0
-last_log = 0.0
+last_err = 0.0       # laatste foutregel (throttle: max 1/min)
+last_status = time.time()   # laatste ok/fail-statusregel (eens per ~5 min)
 
 while True:
     try:
@@ -40,11 +41,11 @@ while True:
     except Exception as e:
         fail += 1
         # alleen af en toe loggen om de journal niet vol te schrijven
-        if time.time() - last_log > 60:
+        if time.time() - last_err > 60:
             print(f"[push] fout: {e}", file=sys.stderr, flush=True)
-            last_log = time.time()
-    # statusregel eens per ~5 min
-    if time.time() - last_log > 300:
+            last_err = time.time()
+    # statusregel eens per ~5 min (eigen timer, dus fouten verbergen 'm niet)
+    if time.time() - last_status > 300:
         print(f"[push] ok={ok} fail={fail}", flush=True)
-        last_log = time.time()
+        last_status = time.time()
     time.sleep(INTERVAL)

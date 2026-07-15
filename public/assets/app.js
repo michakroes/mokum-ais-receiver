@@ -2,6 +2,17 @@
 const $ = id => document.getElementById(id);
 const SVGNS = "http://www.w3.org/2000/svg";
 
+/* HTML-escape voor alles wat via innerHTML in de DOM komt. Scheepsnamen en
+   mokum-radar-velden zijn niet te vertrouwen: een AIS-naam komt over de lucht
+   (de 6-bit charset bevat < en >), dus zonder escape = XSS bij elke bezoeker. */
+const ESC_MAP = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ESC_MAP[c]);
+/* alleen http(s)-links toestaan (geen javascript:/data: uit externe data) */
+function safeUrl(u){
+  try { const p = new URL(u, location.href); return (p.protocol === "http:" || p.protocol === "https:") ? p.href : ""; }
+  catch { return ""; }
+}
+
 /* ---------- dark mode ---------- */
 (function initTheme(){
   const saved = localStorage.getItem("mokum-theme");
@@ -43,6 +54,52 @@ function checkPhoto(mmsi){
 function vesselColor(mmsi){
   const accent = getComputedStyle(document.body).getPropertyValue("--blue").trim() || "#3366FF";
   return photoCache[mmsi] ? accent : "#7C3AED";
+}
+
+/* ---------- VesselFinder-fallback (naam + foto) ----------
+   Vult naam/foto aan als AIS + mokum-radar niks hebben. Raakt de markerkleur
+   NIET aan (die blijft puur photoCache). /api/vf cachet server-side in Blobs. */
+const vfInfo = {};            // mmsi -> {name, photoUrl, vesselFinderUrl} of null (VF weet 't ook niet)
+const vfQueue = [];           // mmsi's die nog opgehaald moeten worden (tabel-namen)
+const vfQueued = new Set();   // staat in de wachtrij of is al opgehaald -> niet nog eens queuen
+let vfPumping = false;
+
+async function vfFetch(mmsi){
+  if(mmsi in vfInfo) return vfInfo[mmsi];
+  try{
+    const r = await fetch("/api/vf?mmsi=" + encodeURIComponent(mmsi), { cache: "no-store" });
+    const d = await r.json();
+    vfInfo[mmsi] = (d && !d.error && (d.name || d.photoUrl))
+      ? { name: d.name || null, photoUrl: d.photoUrl || null, vesselFinderUrl: d.vesselFinderUrl || null }
+      : null;
+  }catch(e){ vfInfo[mmsi] = null; }
+  return vfInfo[mmsi];
+}
+
+// Wachtrij sequentieel afwerken, max ~1 request/s, alleen bij zichtbare tab.
+async function pumpVfQueue(){
+  if(vfPumping) return;
+  vfPumping = true;
+  try{
+    while(vfQueue.length){
+      if(document.hidden) break;         // verborgen tab: pauzeer, hervat bij terugkeer
+      const mmsi = vfQueue.shift();
+      if(mmsi in vfInfo) continue;
+      await vfFetch(mmsi);
+      await new Promise(res => setTimeout(res, 1000));
+    }
+  } finally { vfPumping = false; }
+}
+
+// Elke tick: zichtbare schepen zonder AIS-naam in de wachtrij zetten (1x).
+function queueVfNames(vessels){
+  if(document.hidden) return;
+  vessels.forEach(v => {
+    if(v.name || (v.mmsi in vfInfo) || vfQueued.has(v.mmsi)) return;
+    vfQueued.add(v.mmsi);
+    vfQueue.push(v.mmsi);
+  });
+  pumpVfQueue();
 }
 
 async function initMap(){
@@ -120,7 +177,13 @@ function setOffline(msg){
 }
 function fmt(x, d=1){ return x == null ? "-" : (typeof x === "number" ? x.toFixed(d) : x); }
 
+let ticking = false;
 async function tick(){
+  if(ticking) return;            // geen overlappende fetches bij een trage /api/state
+  ticking = true;
+  try { await tickBody(); } finally { ticking = false; }
+}
+async function tickBody(){
   let s;
   try{
     const r = await fetch("/api/state", { cache: "no-store" });
@@ -150,18 +213,24 @@ async function tick(){
   $("shipMeta").textContent = vessels.length ? `${vessels.length} zichtbaar` : "nieuwste eerst";
   const rows = $("rows");
   if(!vessels.length){
-    rows.innerHTML = `<tr><td colspan="5" class="empty">${fr.on ? "Wachten op eerste schip (ontvangst)&hellip;" : "Geen recente data van het station."}</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="4" class="empty">${fr.on ? "Wachten op eerste schip (ontvangst)&hellip;" : "Geen recente data van het station."}</td></tr>`;
   } else {
     rows.innerHTML = vessels.map(v => {
       const moving = (v.sog != null && v.sog >= 0.5);
       const st = v.lat == null ? '<span class="pill no">geen pos</span>'
         : (moving ? '<span class="pill mv">varend</span>' : '<span class="pill st">stil</span>');
-      return `<tr class="vrow" data-mmsi="${v.mmsi}"><td class="mono">${v.mmsi}</td>
-      <td class="nm">${v.name || '<span style="color:var(--ink-faint)">-</span>'}</td>
+      // AIS-naam wint altijd -> VF-naam met badge -> "-"
+      const vf = vfInfo[v.mmsi];
+      const nm = v.name ? esc(v.name)
+        : (vf && vf.name) ? esc(vf.name) + '<span class="pill vf" title="Naam via VesselFinder">VF</span>'
+        : '<span style="color:var(--ink-faint)">-</span>';
+      return `<tr class="vrow" data-mmsi="${esc(v.mmsi)}"><td class="mono">${esc(v.mmsi)}</td>
+      <td class="nm">${nm}</td>
       <td class="mono">${v.sog == null ? "-" : fmt(v.sog)}</td>
       <td>${st}</td></tr>`;
     }).join("");
   }
+  queueVfNames(vessels);   // namen zonder AIS via VF ophalen (voor de volgende tick)
 
   // Kaart-markers in een try/catch: een kaart-hik (bv. referer-fout) mag NOOIT
   // de rest van de UI (schepenlijst, feed) breken.
@@ -176,7 +245,8 @@ async function tick(){
         const color = vesselColor(v.mmsi);   // blauw = foto, paars = geen foto
         const el = moving ? boatEl(cog, color) : dotEl(color);
         const pos = { lat: v.lat, lng: v.lon };
-        const title = (v.name || String(v.mmsi)) + " · " + (v.sog == null ? "?" : fmt(v.sog) + "kn");
+        const vfName = (vfInfo[v.mmsi] && vfInfo[v.mmsi].name) || null;
+        const title = (v.name || vfName || String(v.mmsi)) + " · " + (v.sog == null ? "?" : fmt(v.sog) + "kn");
         if(markers[v.mmsi]){ markers[v.mmsi].position = pos; markers[v.mmsi].content = el; markers[v.mmsi].title = title; }
         else {
           const mk = new AdvMarker({ map: gmap, position: pos, content: el, title, gmpClickable: true });
@@ -206,7 +276,7 @@ function detailRows(v, d){
     ["Lengte", info.lengthM ? info.lengthM + " m" : "-"],
     ["Klasse", info.aisClass ? "Class " + info.aisClass : "-"],
   ];
-  $("dtRows").innerHTML = rows.map(([l, val]) => `<div class="dt-row"><span class="l">${l}</span><span class="v">${val}</span></div>`).join("");
+  $("dtRows").innerHTML = rows.map(([l, val]) => `<div class="dt-row"><span class="l">${esc(l)}</span><span class="v">${esc(val)}</span></div>`).join("");
 }
 function applyDetail(v, d){
   const info = d.info || {};
@@ -220,7 +290,8 @@ function applyDetail(v, d){
   const img = new Image(); img.alt = "";
   img.onload = () => ph.appendChild(img);
   img.src = MOKUM + "/api/v2/vessel/" + v.mmsi + "/photo";
-  if(info.vesselFinderUrl) $("dtVf").href = info.vesselFinderUrl;
+  const vfUrl = info.vesselFinderUrl && safeUrl(info.vesselFinderUrl);
+  if(vfUrl) $("dtVf").href = vfUrl;
   detailRows(v, d);
   $("dtNote").textContent = (!info.operator && !info.lengthM) ? "Beperkte info (buiten de Amsterdamse grachten)." : "";
 }
@@ -246,4 +317,7 @@ $("rows").addEventListener("click", e => {
 
 initMap();
 tick();
-setInterval(tick, 2000);
+// Alleen pollen als de tab zichtbaar is: een verborgen tab hoeft de cloud niet
+// elke 2s te bevragen (scheelt Netlify-invocations). Bij terugkeer meteen verversen.
+setInterval(() => { if(!document.hidden) tick(); }, 2000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) tick(); });
