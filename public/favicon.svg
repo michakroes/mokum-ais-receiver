@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    :root { --fg: #091C35; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #EAF2FF; } }
+  </style>
+  <path d="M17 28A17 17 0 0 1 47 28" fill="none" stroke="#69FEFF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M23.5 33A11 11 0 0 1 40.5 33" fill="none" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>
+  <circle cx="32" cy="21" r="3" fill="#69FEFF"/>
+  <path d="M16 40h32l-4.5 10.5a3 3 0 0 1-2.7 1.8H23.2a3 3 0 0 1-2.7-1.8Z" fill="var(--fg)"/>
+</svg>

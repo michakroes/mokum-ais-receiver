@@ -1,163 +1,82 @@
 <!doctype html><html lang=nl><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>Matsutec AR-10 - AIS live</title>
-<script src="config.js"></script>
+<title>Mokum AIS - live</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<script src="/config.js"></script>
 <script>(g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key:window.GMAPS_KEY,v:"weekly"});</script>
-<style>
-:root{--navy:#091C35;--blue:#3366FF;--cyan:#69FEFF;--red:#FF503C;--bg:#F3F6F9;--hair:#e2e8f0;--mut:#5b6877;
- --bbBg:#E5EBFF;--bbInk:#091C35;--grBg:#E8F5EE;--grInk:#0F5132;--waBg:#FFF4D6;--waInk:#5C3A00;--reBg:#FFE8E4;--reInk:#8A1C0F}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);font:14px/1.5 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:var(--navy)}
-.hd{background:var(--navy);color:#fff;padding:16px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.hd h1{margin:0;font-size:18px;font-weight:700}.hd .sub{opacity:.8;font-size:12.5px}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:6px}
-.dot.on{background:var(--cyan);box-shadow:0 0 0 3px rgba(105,254,255,.25)}.dot.off{background:#8595a8}
-.statepill{margin-left:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600}
-.ctrl{display:flex;gap:10px;align-items:center;padding:14px 22px;background:#fff;border-bottom:1px solid var(--hair);flex-wrap:wrap}
-.meta{color:var(--mut);font-size:12.5px}
-.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:14px 22px}
-.stat{background:#fff;border:1px solid var(--hair);border-radius:10px;padding:11px 13px}
-.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--mut)}
-.stat .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
-.stat.bb{background:var(--bbBg)}.stat.gr{background:var(--grBg);color:var(--grInk)}.stat.wa{background:var(--waBg);color:var(--waInk)}
-.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;padding:0 22px 14px}
-.card{background:#fff;border:1px solid var(--hair);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.card h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.3px;color:var(--bbInk);background:var(--bbBg);padding:9px 14px}
-#map{height:460px;width:100%;background:#e9eef3}
-.maperr{padding:18px;color:var(--reInk);background:var(--reBg);font-size:13px}
-.list{max-height:460px;overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--hair);white-space:nowrap}
-th{position:sticky;top:0;background:#fff;color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
-td.mono{font-variant-numeric:tabular-nums}
-.tag{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700}
-.tag.mv{background:var(--grBg);color:var(--grInk)}.tag.st{background:var(--bg);color:var(--mut)}
-.raw{margin:0 22px 22px;background:var(--navy);color:#cfe0ff;border-radius:12px;padding:12px 14px;font:12px/1.45 ui-monospace,Menlo,monospace;height:170px;overflow:auto}
-.raw .l{white-space:pre;opacity:.9}
-.foot{color:var(--mut);font-size:12px;padding:0 22px 22px}
-.err{background:var(--reBg);color:var(--reInk);border-radius:8px;padding:8px 12px;margin:0 22px 12px;font-size:12.5px;display:none}
-@media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
-</style></head><body>
-<div class="hd">
-  <div><h1>AIS-ontvanger live</h1><div class="sub">Matsutec AR-10 - USB NMEA 0183 @ 38400 - eigen ontvangst (Pi-station)</div></div>
-  <div class="statepill"><span id="dot" class="dot off"></span><span id="stateTxt">verbinden...</span></div>
-</div>
+</head><body>
 
-<div class="ctrl">
-  <span class="meta">poort <code id="port">-</code> &middot; looptijd <b id="elapsed">0</b>s &middot; <b id="spm">0</b> zin/s &middot; laatste update <b id="age">-</b></span>
-</div>
+<div id="map"></div>
 
-<div id="err" class="err"></div>
+<header class="ab">
+  <span class="ab-mark" aria-hidden="true">
+    <svg viewBox="0 0 64 64" fill="none">
+      <path d="M17 28A17 17 0 0 1 47 28" fill="none" stroke="#69FEFF" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M23.5 33A11 11 0 0 1 40.5 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" opacity=".5"/>
+      <circle cx="32" cy="21" r="2.6" fill="#69FEFF"/>
+      <path d="M16 40h32l-4.5 10.5a3 3 0 0 1-2.7 1.8H23.2a3 3 0 0 1-2.7-1.8Z" fill="currentColor"/>
+    </svg>
+  </span>
+  <span class="ab-name">Mokum AIS</span>
+  <span class="ab-sub">AR-10 &middot; eigen ontvangst</span>
+  <div class="ab-right">
+    <div class="statepill" id="statepill"><span class="live-dot"></span><span id="stateTxt">verbinden&hellip;</span></div>
+    <button class="ab-tgl" id="darkToggle" title="Licht/donker" aria-label="Thema wisselen">
+      <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
 
-<div class="grid">
-  <div class="stat bb"><div class="k">Zinnen ontvangen</div><div class="v" id="sentences">0</div></div>
-  <div class="stat"><div class="k">Gedecodeerd</div><div class="v" id="decoded">0</div></div>
-  <div class="stat gr"><div class="k">Unieke schepen</div><div class="v" id="vessels">0</div></div>
-  <div class="stat gr"><div class="k">Met positie</div><div class="v" id="positioned">0</div></div>
-  <div class="stat"><div class="k">Bytes</div><div class="v" id="bytes">0</div></div>
-  <div class="stat wa"><div class="k">Decode-fouten</div><div class="v" id="errors">0</div></div>
-</div>
+<aside class="deck glass">
+  <div class="deck-scroll">
+    <div class="deck-head">
+      <div><div class="eyebrow">Meetstation</div><div class="title">AR-10 ontvangst</div></div>
+      <div class="sub">poort <span class="mono" id="port">-</span></div>
+    </div>
 
-<div class="cols">
-  <div class="card"><h2>Kaart - live posities (Google Maps)</h2><div id="map"></div></div>
-  <div class="card"><h2>Schepen (nieuwste eerst)</h2><div class="list">
-    <table><thead><tr><th>MMSI</th><th>Naam</th><th>Land</th><th>SOG</th><th>COG</th><th>Status</th><th>#</th></tr></thead>
-    <tbody id="rows"><tr><td colspan="7" style="color:var(--mut);padding:16px">Verbinden met station...</td></tr></tbody></table>
-  </div></div>
-</div>
+    <div>
+      <div class="seclabel"><h2>Meetwaarden</h2><span class="meta" id="ageMeta">-</span></div>
+      <div class="stats">
+        <div class="stat accent"><div class="k">Zinnen</div><div class="big" id="sentences">0</div><div class="sub">ontvangen</div></div>
+        <div class="stat hm"><div class="k">Gedecodeerd</div><div class="big" id="decoded">0</div><div class="sub up" id="spmSub">0/s</div></div>
+        <div class="stat"><div class="k">Schepen</div><div class="big" id="vessels">0</div><div class="sub">uniek</div></div>
+        <div class="stat"><div class="k">Met positie</div><div class="big" id="positioned">0</div><div class="sub">op kaart</div></div>
+        <div class="stat hm"><div class="k">Bytes</div><div class="big" id="bytes">0</div><div class="sub">rauw</div></div>
+        <div class="stat hm"><div class="k">Fouten</div><div class="big" id="errors">0</div><div class="sub warn">decode</div></div>
+      </div>
+    </div>
 
-<div class="card" style="margin:0 22px 14px"><h2>Ruwe NMEA-feed (live)</h2>
-  <div class="raw" id="raw"></div>
-</div>
-<div class="foot">Berichttypes: <span id="types">-</span>. Type 1/2/3 = Class A positie, 5 = Class A statisch (naam), 18/19 = Class B, 24 = Class B statisch. &middot; Read-only cloud-weergave; het station pusht elke paar seconden een snapshot.</div>
+    <div>
+      <div class="seclabel"><h2>Schepen</h2><span class="meta" id="shipMeta">nieuwste eerst</span></div>
+      <div class="listcard"><div class="tbl-wrap">
+        <table><thead><tr><th>MMSI</th><th>Naam</th><th>SOG</th><th>Status</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4" class="empty">Verbinden met station&hellip;</td></tr></tbody></table>
+      </div></div>
+    </div>
 
-<script>
-const $=id=>document.getElementById(id);
-let gmap=null, AdvMarker=null, markers={}, mapReady=false;
+    <div class="fixlog">
+      <div class="fl-head"><span>Ruwe NMEA-feed</span><span class="mono" id="typesMeta">-</span></div>
+      <div class="fl-body" id="raw"></div>
+    </div>
+  </div>
+</aside>
 
-async function initMap(){
-  if(!window.GMAPS_KEY){ $('map').outerHTML='<div class="maperr">Geen GMAPS_KEY geladen - kan Google Maps niet tonen.</div>'; return; }
-  try{
-    const {Map}=await google.maps.importLibrary('maps');
-    const {AdvancedMarkerElement}=await google.maps.importLibrary('marker');
-    AdvMarker=AdvancedMarkerElement;
-    gmap=new Map($('map'),{
-      center:{lat:52.380,lng:4.915}, zoom:12,
-      mapId: window.GMAPS_ID || undefined,
-      disableDefaultUI:false, clickableIcons:false, gestureHandling:'greedy'
-    });
-    mapReady=true;
-  }catch(e){ $('map').outerHTML='<div class="maperr">Google Maps laadfout: '+e.message+'</div>'; }
-}
-function markerContent(v){
-  const moving=(v.sog!=null&&v.sog>=0.5);
-  const col=moving?'#3366FF':'#8595a8';
-  const rot=(v.cog!=null&&v.cog<360)?v.cog:(v.heading!=null?v.heading:0);
-  const d=document.createElement('div');
-  d.style.cssText=`transform:rotate(${rot}deg);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:17px solid ${col};filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));cursor:pointer`;
-  return d;
-}
-function fmt(x,d=1){return x==null?'-':(typeof x==='number'?x.toFixed(d):x);}
+<aside class="detail glass" id="detail" hidden>
+  <button class="dt-close" id="dtClose" aria-label="Sluiten">&times;</button>
+  <div class="dt-photo" id="dtPhoto"></div>
+  <div class="dt-body">
+    <div class="dt-name" id="dtName">-</div>
+    <div class="dt-op" id="dtOp"></div>
+    <div class="dt-rows" id="dtRows"></div>
+    <a class="dt-vf" id="dtVf" target="_blank" rel="noopener" hidden>Bekijk op VesselFinder &rarr;</a>
+    <div class="dt-note" id="dtNote"></div>
+  </div>
+</aside>
 
-// Versheid: het station geldt als "live" zolang de laatste push < 20s oud is.
-function freshness(ageSec){
-  if(ageSec==null) return {on:false,txt:'onbekend'};
-  if(ageSec<20) return {on:true,txt:'live'};
-  if(ageSec<120) return {on:false,txt:`vertraagd (${ageSec}s)`};
-  return {on:false,txt:`station offline (${ageSec}s geleden)`};
-}
+<div class="errbar" id="err"></div>
 
-async function tick(){
-  let s;
-  try{
-    const r=await fetch('/api/state',{cache:'no-store'});
-    if(r.status===404){ setOffline('Nog geen data van het station.'); return; }
-    s=await r.json();
-  }catch(e){ setOffline('Geen verbinding met de cloud.'); return; }
-  if(s.error){ setOffline(s.error); return; }
-
-  const fr=freshness(s._ageSec);
-  $('dot').className='dot '+(fr.on?'on':'off');
-  $('stateTxt').textContent=fr.on?'live':fr.txt;
-  $('age').textContent=(s._ageSec==null?'-':s._ageSec+'s geleden');
-  $('port').textContent=s.serial_port||'-'; $('elapsed').textContent=Math.round(s.elapsed||0);
-  $('spm').textContent=s.sentences_per_sec||0; $('sentences').textContent=s.sentences||0;
-  $('decoded').textContent=s.decoded||0; $('vessels').textContent=s.vessel_count||0;
-  $('positioned').textContent=s.positioned||0; $('bytes').textContent=s.bytes||0; $('errors').textContent=s.errors||0;
-  $('types').textContent=(s.types&&Object.keys(s.types).length)?Object.entries(s.types).sort((a,b)=>a[0]-b[0]).map(([k,v])=>`t${k}:${v}`).join('  '):'-';
-  const e=$('err'); if(s.last_error){e.style.display='block';e.textContent='Laatste melding: '+s.last_error;}else{e.style.display='none';}
-
-  const vessels=s.vessels||[];
-  const rows=$('rows');
-  if(!vessels.length){ rows.innerHTML='<tr><td colspan="7" style="color:var(--mut);padding:16px">'+(fr.on?'Wachten op eerste schip (ontvangst)...':'Geen recente data van het station.')+'</td></tr>'; }
-  else{
-    rows.innerHTML=vessels.map(v=>{
-      const moving=(v.sog!=null&&v.sog>=0.5);
-      const st=v.lat==null?'<span class="tag st">geen pos</span>':(moving?'<span class="tag mv">varend</span>':'<span class="tag st">stil</span>');
-      return `<tr><td class="mono"><a href="https://www.vesselfinder.com/?mmsi=${v.mmsi}" target="_blank" rel="noopener" title="Bekijk ${v.mmsi} op VesselFinder" style="color:var(--blue);text-decoration:none">${v.mmsi}</a></td><td>${v.name||'<span style=color:#8595a8>-</span>'}</td><td>${v.country||'-'}</td>
-      <td class="mono">${v.sog==null?'-':fmt(v.sog)} kn</td><td class="mono">${v.cog==null||v.cog>=360?'-':Math.round(v.cog)+'&deg;'}</td>
-      <td>${st}</td><td class="mono">${v.count}</td></tr>`;
-    }).join('');
-  }
-
-  if(mapReady){
-    const seen={};
-    vessels.filter(v=>v.lat!=null).forEach(v=>{
-      seen[v.mmsi]=1;
-      const pos={lat:v.lat,lng:v.lon};
-      const title=(v.name||String(v.mmsi))+' · '+(v.sog==null?'?':fmt(v.sog)+'kn');
-      if(markers[v.mmsi]){ markers[v.mmsi].position=pos; markers[v.mmsi].content=markerContent(v); markers[v.mmsi].title=title; }
-      else{ markers[v.mmsi]=new AdvMarker({map:gmap,position:pos,content:markerContent(v),title}); }
-    });
-    Object.keys(markers).forEach(m=>{ if(!seen[m]){ markers[m].map=null; delete markers[m]; } });
-  }
-
-  const raw=s.raw||[];
-  $('raw').innerHTML=raw.map(r=>{const t=r.t?new Date(r.t*1000).toLocaleTimeString('nl-NL'):'';return `<div class="l"><span style="opacity:.5">${t}</span>  ${String(r.line||'').replace(/</g,'&lt;')}</div>`;}).join('');
-  $('raw').scrollTop=$('raw').scrollHeight;
-}
-function setOffline(msg){
-  $('dot').className='dot off'; $('stateTxt').textContent='offline';
-  const e=$('err'); e.style.display='block'; e.textContent=msg;
-}
-initMap(); tick(); setInterval(tick,2000);
-</script>
+<script src="/assets/app.js"></script>
 </body></html>
