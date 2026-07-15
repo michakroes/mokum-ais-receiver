@@ -170,7 +170,7 @@ body.dark .glass{
 .pi-row .v.warn{color:var(--amber)} .pi-row .v.bad{color:var(--red)}
 
 /* ---------- AISHub station panel (reuses .pi-stats/.pi-row grid) ---------- */
-.ah-link{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:var(--blue)}
+.ah-view{margin-left:8px;font-size:11px;font-weight:600;color:var(--blue);letter-spacing:0;text-transform:none}
 
 /* ---------- vessel list ---------- */
 .listcard{border-radius:var(--r-card-sm);border:.5px solid var(--hair);overflow:hidden;background:var(--card-fill)}
