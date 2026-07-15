@@ -1,86 +1,88 @@
-# Deploy - matsutec cloud-dashboard
+# Deploy - Mokum AIS cloud dashboard
 
-Read-only cloud-weergave van het AR-10-station. De Pi pusht elke paar seconden
-`/state` naar een Netlify Function (`ingest`), die het in Netlify Blobs bewaart;
-de frontend leest het via `state`. Frontend-updates = gewoon `git push`.
+Read-only cloud view of the AR-10 station, live at
+**https://mokum-ais-receiver.netlify.app/**. The Pi pushes `/state` to a
+Netlify Function (`ingest`) every few seconds, which stores it in Netlify
+Blobs; the frontend reads it via `state`. Frontend updates = just `git push`.
 
 ```
 Pi: serve.py (:8801) --/state--> cloud-push.py --POST /api/ingest--> Netlify Blobs
                                                         frontend <--/api/state-- Blobs
 ```
 
-## 1. Repo naar GitHub
+## 1. Repo on GitHub
 
-De repo is **`michakroes/mokum-ais-receiver`** (PUBLIC, persoonlijk account
-michakroes) en staat lokaal in `~/Downloads/matsutec`. Bestaat al; opnieuw
-opzetten zou zijn:
+The repo is **`michakroes/mokum-ais-receiver`** (PUBLIC, personal account
+michakroes), checked out locally at `~/Downloads/matsutec`. It already exists;
+recreating it from scratch would be:
 
 ```sh
 cd ~/Downloads/matsutec
 gh repo create mokum-ais-receiver --public --source=. --remote=origin --push
 ```
-(of maak handmatig een repo aan en `git push -u origin main`)
+(or create a repo manually and `git push -u origin main`)
 
-Let op: `station/`, `.env.local`, `.cloud-push.env`, `public/config.js`,
-`CLAUDE.md` en `.claude/` zijn gitignored - de publieke repo blijft puur het
-dashboard, zonder secrets of Pi-scripts.
+Note: `station/`, `.env.local`, `.cloud-push.env`, `public/config.js`,
+`CLAUDE.md` and `.claude/` are gitignored - the public repo stays purely the
+dashboard, with no secrets or Pi scripts.
 
-## 2. Netlify-site aan de repo koppelen
+## 2. Connect the Netlify site to the repo
 
-- Netlify -> Add new site -> Import from Git -> kies `mokum-ais-receiver`.
-- Build settings worden uit `netlify.toml` gelezen (command `node build-config.mjs`,
-  publish `public`, functions `netlify/functions`). Niks aan te passen.
-- Deploy. Je krijgt een URL zoals `https://<naam>.netlify.app`.
+- Netlify -> Add new site -> Import from Git -> pick `mokum-ais-receiver`.
+- Build settings are read from `netlify.toml` (command `node build-config.mjs`,
+  publish `public`, functions `netlify/functions`). Nothing to change.
+- Deploy. You get a URL like `https://<name>.netlify.app`.
 
-## 3. Netlify env-vars zetten (Site configuration -> Environment variables)
+## 3. Set Netlify env vars (Site configuration -> Environment variables)
 
-| Var | Waarde |
+| Var | Value |
 |---|---|
-| `AIS_PUSH_KEY` | lang willekeurig geheim, genereer met `openssl rand -hex 24` (moet gelijk zijn aan de Pi) |
-| `GMAPS_KEY` | je Google Maps browser-key (uit `matsutec/.env.local`) |
-| `GMAPS_ID` | je Google Maps Map ID (uit `matsutec/.env.local`) |
-| `MOKUM_READ_KEY` | READ-key voor mokum-radar (`vessel`-function proxy'd hiermee de schip-detail-API) |
-| `VESSEL_MAX_AGE_H` | optioneel, default 12 - schepen ouder dan X uur weglaten in `state` |
+| `AIS_PUSH_KEY` | long random secret, generate with `openssl rand -hex 24` (must equal the Pi's) |
+| `GMAPS_KEY` | your Google Maps browser key (from `matsutec/.env.local`) |
+| `GMAPS_ID` | your Google Maps Map ID (from `matsutec/.env.local`) |
+| `MOKUM_READ_KEY` | READ key for mokum-radar (the `vessel` function proxies the vessel-detail API with it) |
+| `VESSEL_MAX_AGE_H` | optional, default 12 - drop vessels older than X hours from `state` |
 
-Na het zetten: **Trigger deploy** (Deploys -> Trigger deploy) zodat `config.js`
-met de GMAPS-waarden opnieuw gegenereerd wordt.
+After setting them: **Trigger deploy** (Deploys -> Trigger deploy) so
+`config.js` is regenerated with the GMAPS values.
 
-## 4. Google Maps referrer toestaan
+## 4. Allow the Google Maps referrer
 
-In de Google Cloud Console -> Credentials -> je Maps-key -> Website restrictions:
-voeg `https://<naam>.netlify.app/*` toe. Anders blijft de kaart "Oops! Something
-went wrong." geven.
+In the Google Cloud Console -> Credentials -> your Maps key -> Website
+restrictions: add `https://mokum-ais-receiver.netlify.app/*`. Otherwise the map
+keeps showing "Oops! Something went wrong."
 
 ## 5. Netlify Blobs
 
-Werkt out-of-the-box op moderne Netlify (geen setup). De functions gebruiken
-`@netlify/blobs`; de store heet `ais`.
+Works out of the box on modern Netlify (no setup). The functions use
+`@netlify/blobs`; the store is named `ais`.
 
-## 6. Op de Pi: de pusher installeren
+## 6. On the Pi: install the pusher
 
 ```sh
-# vanaf je Mac, vanuit ~/Downloads/matsutec-dashboard:
+# from your Mac, inside ~/Downloads/matsutec:
 scp pi/cloud-push.py pi@mokum-ais.local:~/matsutec/cloud-push.py
 scp pi/.cloud-push.env.example pi@mokum-ais.local:~/matsutec/.cloud-push.env
 scp pi/ais-cloud-push.service pi@mokum-ais.local:/tmp/ais-cloud-push.service
 
-# op de Pi:
+# on the Pi:
 ssh pi@mokum-ais.local
-nano ~/matsutec/.cloud-push.env         # CLOUD_INGEST_URL + AIS_PUSH_KEY invullen (zelfde key als Netlify)
+nano ~/matsutec/.cloud-push.env         # fill in CLOUD_INGEST_URL + AIS_PUSH_KEY (same key as Netlify)
 chmod 600 ~/matsutec/.cloud-push.env
 sudo mv /tmp/ais-cloud-push.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now ais-cloud-push
-journalctl -u ais-cloud-push -f        # moet "ok=..." tonen, geen 401/fout
+journalctl -u ais-cloud-push -f        # should show "ok=...", no 401/errors
 ```
 
-## 7. Verifieren
+## 7. Verify
 
-- `https://<naam>.netlify.app` opent -> statuspill wordt "live" zodra de eerste push
-  binnen is (< 20s).
-- Zonder ontvangst blijven de tellers 0 (dat is antenne, niet de pijplijn).
-- 401 in de push-log = `AIS_PUSH_KEY` op de Pi != die in Netlify.
+- https://mokum-ais-receiver.netlify.app/ opens -> the status pill turns
+  "live" as soon as the first push lands (< 20s).
+- Without reception the counters stay 0 (that's the antenna, not the
+  pipeline). The pill turns amber ("quiet Xm") during a reception lull.
+- A 401 in the push log = `AIS_PUSH_KEY` on the Pi != the one in Netlify.
 
-## Frontend updaten
+## Updating the frontend
 
-Pas `public/index.html` aan, `git push` -> Netlify deployt automatisch. Klaar.
+Edit files under `public/`, `git push` -> Netlify deploys automatically. Done.

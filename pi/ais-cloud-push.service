@@ -1,5 +1,5 @@
 [Unit]
-Description=AIS cloud pusher (lokale /state -> Netlify)
+Description=AIS cloud pusher (local /state -> Netlify)
 After=network-online.target ais-dashboard.service
 Wants=network-online.target
 

@@ -1,17 +1,17 @@
-// VesselFinder-fallback: scrapet naam + foto-URL van de publieke VF-detailpagina
-// wanneer mokum-radar/AIS niks heeft. Geen publieke VF-API; de pagina geeft 403
-// zonder browser-UA, 200 mét. Naam staat in <title>, de foto-URL als
-// static.vesselfinder.net/ship-photo/0-<mmsi>-<hash>/... (hash niet construeerbaar
-// -> scrapen verplicht). Resultaat wordt in Netlify Blobs gecachet.
+// VesselFinder fallback: scrapes name + photo URL from the public VF detail page
+// when mokum-radar/AIS has nothing. No public VF API; the page returns 403
+// without a browser UA, 200 with one. The name is in <title>, the photo URL as
+// static.vesselfinder.net/ship-photo/0-<mmsi>-<hash>/... (hash not constructible
+// -> scraping required). Result is cached in Netlify Blobs.
 import { getStore } from "@netlify/blobs";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-const POS_TTL_MS = 7 * 24 * 3600 * 1000;   // gevonden: 7 dagen bewaren
-const NEG_TTL_MS = 24 * 3600 * 1000;       // niks gevonden: 1 dag
+const POS_TTL_MS = 7 * 24 * 3600 * 1000;   // found: keep for 7 days
+const NEG_TTL_MS = 24 * 3600 * 1000;       // nothing found: 1 day
 
-// Zelfde best-effort per-IP rate-limit als vessel.mjs (per-instance, 60/min).
+// Same best-effort per-IP rate limit as vessel.mjs (per-instance, 60/min).
 const WINDOW_MS = 60000, MAX_PER_IP = 60;
 const hits = new Map();
 function rateLimited(ip) {
@@ -25,18 +25,18 @@ function rateLimited(ip) {
   return arr.length > MAX_PER_IP;
 }
 
-// Parse de VF-detail-HTML. Alleen aanroepen bij HTTP 200 (een 404-pagina heeft
-// <title>Error 404 - VesselFinder</title> en zou anders "Error 404" als naam geven).
+// Parse the VF detail HTML. Only call on HTTP 200 (a 404 page has
+// <title>Error 404 - VesselFinder</title> and would otherwise yield "Error 404" as the name).
 function parseVf(html) {
   let name = null;
   const tm = html.match(/<title>([^<]*)<\/title>/i);
   if (tm) {
     const t = tm[1].trim();
-    // formaat: "NAAM, Type ship - Details ... - VesselFinder"
+    // format: "NAME, Type ship - Details ... - VesselFinder"
     const comma = t.indexOf(",");
     let cand = comma > 0 ? t.slice(0, comma).trim()
       : (t.indexOf(" - ") > 0 ? t.slice(0, t.indexOf(" - ")).trim() : "");
-    // afvang: foutpagina's / lege / generieke titels niet als naam gebruiken
+    // guard: don't use error pages / empty / generic titles as the name
     if (cand && !/^error\b/i.test(cand) && !/^vessels?$/i.test(cand) && !/vesselfinder/i.test(cand)) {
       name = cand;
     }
@@ -50,7 +50,7 @@ function parseVf(html) {
 export default async (req) => {
   const headers = {
     "content-type": "application/json",
-    // CDN/browser mogen lang cachen; de Blobs-cache dekt de scrape zelf af.
+    // CDN/browser may cache for a long time; the Blobs cache covers the scrape itself.
     "cache-control": "public, max-age=86400",
     "access-control-allow-origin": "*",
   };
@@ -59,18 +59,18 @@ export default async (req) => {
     || (req.headers.get("x-forwarded-for") || "").split(",")[0].trim()
     || "unknown";
   if (rateLimited(ip)) {
-    return new Response(JSON.stringify({ error: "te veel verzoeken" }), { status: 429, headers });
+    return new Response(JSON.stringify({ error: "too many requests" }), { status: 429, headers });
   }
 
   const url = new URL(req.url);
   const mmsi = (url.searchParams.get("mmsi") || "").replace(/\D/g, "");
-  if (!mmsi) return new Response(JSON.stringify({ error: "mmsi ontbreekt" }), { status: 400, headers });
-  if (mmsi.length > 9) return new Response(JSON.stringify({ error: "ongeldige mmsi" }), { status: 400, headers });
+  if (!mmsi) return new Response(JSON.stringify({ error: "missing mmsi" }), { status: 400, headers });
+  if (mmsi.length > 9) return new Response(JSON.stringify({ error: "invalid mmsi" }), { status: 400, headers });
 
   const store = getStore("ais");
   const cacheKey = `vf/${mmsi}`;
 
-  // Cache-hit binnen TTL -> geen VF-request.
+  // Cache hit within TTL -> no VF request.
   try {
     const cached = await store.get(cacheKey, { type: "json" });
     if (cached && cached.fetchedAt) {
@@ -85,7 +85,7 @@ export default async (req) => {
         }), { headers });
       }
     }
-  } catch { /* blob-leesfout: gewoon opnieuw scrapen */ }
+  } catch { /* blob read error: just scrape again */ }
 
   const vesselFinderUrl = `https://www.vesselfinder.com/vessels/details/${mmsi}`;
   let name = null, photoUrl = null;
@@ -99,12 +99,12 @@ export default async (req) => {
       name = parsed.name;
       photoUrl = parsed.photoUrl;
     }
-    // niet-200 (404/403/5xx) -> negatief cachen, geen error naar de client
-  } catch { /* netwerkfout -> negatief resultaat teruggeven, negatief cachen */ }
+    // non-200 (404/403/5xx) -> cache negatively, no error to the client
+  } catch { /* network error -> return negative result, cache negatively */ }
 
-  // Resultaat cachen (positief én negatief). fetchedAt bepaalt de TTL.
+  // Cache the result (positive and negative). fetchedAt determines the TTL.
   const record = { fetchedAt: Date.now(), name, photoUrl, vesselFinderUrl };
-  try { await store.setJSON(cacheKey, record); } catch { /* schrijffout negeren */ }
+  try { await store.setJSON(cacheKey, record); } catch { /* ignore write error */ }
 
   return new Response(JSON.stringify({ name, photoUrl, vesselFinderUrl }), { headers });
 };

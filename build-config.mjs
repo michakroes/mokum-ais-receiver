@@ -1,5 +1,5 @@
-// Genereert public/config.js uit Netlify-env-vars, zodat de GMAPS-sleutel NIET in git staat.
-// Draait als Netlify build-command (zie netlify.toml).
+// Generates public/config.js from Netlify env vars, so the GMAPS key is NOT in git.
+// Runs as the Netlify build command (see netlify.toml).
 import { writeFileSync } from "node:fs";
 
 const key = process.env.GMAPS_KEY || "";
@@ -10,4 +10,4 @@ writeFileSync(
   `window.GMAPS_KEY=${JSON.stringify(key)};window.GMAPS_ID=${JSON.stringify(id)};\n`
 );
 
-console.log(`config.js geschreven (GMAPS_KEY ${key ? "gezet" : "LEEG"}, GMAPS_ID ${id ? "gezet" : "leeg"})`);
+console.log(`config.js written (GMAPS_KEY ${key ? "set" : "EMPTY"}, GMAPS_ID ${id ? "set" : "empty"})`);

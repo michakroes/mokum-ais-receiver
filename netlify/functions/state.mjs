@@ -1,6 +1,6 @@
-// Serveert de laatste snapshot (publiek, read-only) aan de frontend.
-// Voegt _ageSec toe (server-side berekend) zodat de frontend versheid kan tonen
-// zonder afhankelijk te zijn van de klok van de bezoeker.
+// Serves the latest snapshot (public, read-only) to the frontend.
+// Adds _ageSec (computed server-side) so the frontend can show freshness
+// without depending on the visitor's clock.
 import { getStore } from "@netlify/blobs";
 
 export default async () => {
@@ -13,7 +13,7 @@ export default async () => {
   const store = getStore("ais");
   const doc = await store.get("latest", { type: "json" });
   if (!doc) {
-    return new Response(JSON.stringify({ error: "nog geen data van het station" }), {
+    return new Response(JSON.stringify({ error: "no data from the station yet" }), {
       status: 404,
       headers,
     });
@@ -21,7 +21,7 @@ export default async () => {
 
   const ageSec = Math.max(0, Math.round((Date.now() - (doc.receivedAt || 0)) / 1000));
 
-  // Schepen die langer dan 12h (VESSEL_MAX_AGE_H) geen contact hadden weglaten.
+  // Drop vessels that had no contact for more than 12h (VESSEL_MAX_AGE_H).
   const state = { ...(doc.state || {}) };
   const maxAgeS = (Number(process.env.VESSEL_MAX_AGE_H) || 12) * 3600;
   const nowS = Date.now() / 1000;

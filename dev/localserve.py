@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Snelle lokale dev-server voor het cloud-dashboard - GEEN netlify dev (instant start).
+"""Fast local dev server for the cloud dashboard - NOT netlify dev (instant start).
 
-Serveert public/ + /config.js (GMAPS uit .env.local) + /api/state uit een bron:
+Serves public/ + /config.js (GMAPS from .env.local) + /api/state from a source:
 
-  python3 dev/localserve.py            /api/state = dev/sample-state.json  (niks anders nodig)
+  python3 dev/localserve.py            /api/state = dev/sample-state.json  (nothing else needed)
   python3 dev/localserve.py pi         /api/state = live Pi  (http://mokum-ais.local:8801/state)
   python3 dev/localserve.py cloud      /api/state = live cloud (Netlify)
 
-Open http://localhost:8899  (poort via PORT=..., env-bestand via ENV_FILE=...).
-Frontend aanpassen -> refresh. Ctrl+C stopt.
+Open http://localhost:8899  (port via PORT=..., env file via ENV_FILE=...).
+Edit the frontend -> refresh. Ctrl+C stops.
 """
 import http.server, socketserver, os, sys, json, re, time, urllib.request
 
@@ -35,9 +35,9 @@ def envval(key):
 
 GKEY, GID = envval("GMAPS_KEY"), envval("GMAPS_ID")
 
-# Dev-proxy voor /api/vf: scrapet VesselFinder direct (zoals netlify/functions/vf.mjs,
-# maar zonder Netlify Blobs - hier een simpele in-memory cache). Zo werkt de
-# VF-fallback in de Claude-preview zonder de trage `netlify dev`.
+# Dev proxy for /api/vf: scrapes VesselFinder directly (like netlify/functions/vf.mjs,
+# but without Netlify Blobs - a simple in-memory cache here). This way the
+# VF fallback works in the Claude preview without the slow `netlify dev`.
 VF_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
          "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 VF_CACHE = {}   # mmsi -> (fetchedAt, {name, photoUrl, vesselFinderUrl})
@@ -88,14 +88,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                         "application/javascript")
             return
         if self.path.startswith("/api/vessel"):
-            # proxy naar mokum-radar met de READ_KEY (net als de Netlify-function)
+            # proxy to mokum-radar with the READ_KEY (same as the Netlify function)
             from urllib.parse import urlparse, parse_qs
             mmsi = "".join(c for c in (parse_qs(urlparse(self.path).query).get("mmsi", [""])[0]) if c.isdigit())
             key = os.environ.get("MOKUM_READ_KEY") or envval("MOKUM_READ_KEY")
             if not mmsi:
-                self._bytes({"error": "mmsi ontbreekt"}, "application/json", 400); return
+                self._bytes({"error": "missing mmsi"}, "application/json", 400); return
             if not key:
-                self._bytes({"error": "MOKUM_READ_KEY niet gezet in .env.local"}, "application/json", 503); return
+                self._bytes({"error": "MOKUM_READ_KEY not set in .env.local"}, "application/json", 503); return
             try:
                 req = urllib.request.Request(f"https://mokum-radar.fly.dev/api/v2/vessel/{mmsi}", headers={"x-key": key})
                 data = json.load(urllib.request.urlopen(req, timeout=10))
@@ -107,7 +107,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             from urllib.parse import urlparse, parse_qs
             mmsi = "".join(c for c in (parse_qs(urlparse(self.path).query).get("mmsi", [""])[0]) if c.isdigit())[:9]
             if not mmsi:
-                self._bytes({"error": "mmsi ontbreekt"}, "application/json", 400); return
+                self._bytes({"error": "missing mmsi"}, "application/json", 400); return
             hit = VF_CACHE.get(mmsi)
             if hit and (time.time() - hit[0]) < 86400:
                 self._bytes({**hit[1], "cached": True}, "application/json"); return
@@ -134,10 +134,10 @@ class H(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    # ThreadingHTTPServer: elke request in een eigen thread, zodat browser-polls +
-    # proxy-calls elkaar niet blokkeren (single-threaded stalt onder belasting).
+    # ThreadingHTTPServer: each request in its own thread, so browser polls +
+    # proxy calls don't block each other (single-threaded stalls under load).
     http.server.ThreadingHTTPServer.allow_reuse_address = True
     http.server.ThreadingHTTPServer.daemon_threads = True
-    print(f"lokale dev-server: http://localhost:{PORT}  (bron /api/state = {SRC})")
+    print(f"local dev server: http://localhost:{PORT}  (source /api/state = {SRC})")
     with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), H) as httpd:
         httpd.serve_forever()

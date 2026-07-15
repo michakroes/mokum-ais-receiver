@@ -1,4 +1,4 @@
-<!doctype html><html lang=nl><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
 <title>Mokum AIS Receiver</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,10 +21,10 @@
     </svg>
   </span>
   <span class="ab-name">Mokum AIS</span>
-  <span class="ab-sub">AR-10 &middot; eigen ontvangst</span>
+  <span class="ab-sub">AR-10 &middot; own reception</span>
   <div class="ab-right">
-    <div class="statepill" id="statepill"><span class="live-dot"></span><span id="stateTxt">verbinden&hellip;</span></div>
-    <button class="ab-tgl" id="darkToggle" title="Licht/donker" aria-label="Thema wisselen">
+    <div class="statepill" id="statepill"><span class="live-dot"></span><span id="stateTxt">connecting&hellip;</span></div>
+    <button class="ab-tgl" id="darkToggle" title="Light/dark" aria-label="Toggle theme">
       <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
@@ -33,45 +33,51 @@
 <aside class="deck glass">
   <div class="deck-scroll">
     <div class="deck-head">
-      <div><div class="eyebrow">Meetstation</div><div class="title">AR-10 ontvangst</div></div>
-      <div class="sub">poort <span class="mono" id="port">-</span></div>
+      <div><div class="eyebrow">Station</div><div class="title">AR-10 reception</div></div>
+      <div class="sub">port <span class="mono" id="port">-</span></div>
     </div>
 
     <div>
-      <div class="seclabel"><h2>Meetwaarden</h2><span class="meta" id="ageMeta">-</span></div>
+      <div class="seclabel"><h2>Metrics</h2><span class="meta" id="ageMeta">-</span></div>
       <div class="stats">
-        <div class="stat accent"><div class="k">Zinnen</div><div class="big" id="sentences">0</div><div class="sub">ontvangen</div></div>
-        <div class="stat hm"><div class="k">Gedecodeerd</div><div class="big" id="decoded">0</div><div class="sub up" id="spmSub">0/s</div></div>
-        <div class="stat"><div class="k">Schepen</div><div class="big" id="vessels">0</div><div class="sub">uniek</div></div>
-        <div class="stat"><div class="k">Met positie</div><div class="big" id="positioned">0</div><div class="sub">op kaart</div></div>
-        <div class="stat hm"><div class="k">Bytes</div><div class="big" id="bytes">0</div><div class="sub">rauw</div></div>
-        <div class="stat hm"><div class="k">Fouten</div><div class="big" id="errors">0</div><div class="sub warn">decode</div></div>
+        <div class="stat accent"><div class="k">Sentences</div><div class="big" id="sentences">0</div><div class="sub" id="lastMsgSub">received</div></div>
+        <div class="stat hm"><div class="k">Decoded</div><div class="big" id="decoded">0</div><div class="sub up" id="spmSub">0/s</div></div>
+        <div class="stat"><div class="k">Vessels</div><div class="big" id="vessels">0</div><div class="sub">unique</div></div>
+        <div class="stat"><div class="k">With position</div><div class="big" id="positioned">0</div><div class="sub">on map</div></div>
+        <div class="stat hm"><div class="k">Bytes</div><div class="big" id="bytes">0</div><div class="sub">raw</div></div>
+        <div class="stat hm"><div class="k">Errors</div><div class="big" id="errors">0</div><div class="sub warn">decode</div></div>
       </div>
     </div>
 
     <div>
-      <div class="seclabel"><h2>Schepen</h2><span class="meta" id="shipMeta">nieuwste eerst</span></div>
+      <div class="seclabel"><h2>Vessels</h2><span class="meta" id="shipMeta">newest first</span></div>
       <div class="listcard"><div class="tbl-wrap">
-        <table><thead><tr><th>MMSI</th><th>Naam</th><th>SOG</th><th>Status</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="4" class="empty">Verbinden met station&hellip;</td></tr></tbody></table>
+        <table><thead><tr><th>MMSI</th><th>Name</th><th>SOG</th><th>Status</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4" class="empty">Connecting to station&hellip;</td></tr></tbody></table>
       </div></div>
     </div>
 
     <div class="fixlog">
-      <div class="fl-head"><span>Ruwe NMEA-feed</span><span class="mono" id="typesMeta">-</span></div>
+      <div class="fl-head"><span>Raw NMEA feed</span><span class="mono" id="typesMeta">-</span></div>
       <div class="fl-body" id="raw"></div>
+    </div>
+
+    <div id="piCard" hidden>
+      <div class="seclabel"><h2>Raspberry Pi</h2><span class="meta" id="piMeta"></span></div>
+      <div class="pi-svc" id="piSvc"></div>
+      <div class="pi-stats" id="piStats"></div>
     </div>
   </div>
 </aside>
 
 <aside class="detail glass" id="detail" hidden>
-  <button class="dt-close" id="dtClose" aria-label="Sluiten">&times;</button>
+  <button class="dt-close" id="dtClose" aria-label="Close">&times;</button>
   <div class="dt-photo" id="dtPhoto"></div>
   <div class="dt-body">
     <div class="dt-name" id="dtName">-</div>
     <div class="dt-op" id="dtOp"></div>
     <div class="dt-rows" id="dtRows"></div>
-    <a class="dt-vf" id="dtVf" target="_blank" rel="noopener" hidden>Bekijk op VesselFinder &rarr;</a>
+    <a class="dt-vf" id="dtVf" target="_blank" rel="noopener" hidden>View on VesselFinder &rarr;</a>
     <div class="dt-note" id="dtNote"></div>
   </div>
 </aside>

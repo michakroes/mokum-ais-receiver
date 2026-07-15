@@ -3,10 +3,10 @@
   publish = "public"
   functions = "netlify/functions"
 
-# Security-headers voor alle statische responses. De CSP is hands-on geverifieerd
-# tegen Google Maps + fonts + mokum-radar-foto's (geen violations); pas 'm aan als
-# er een nieuwe externe bron bijkomt. 'unsafe-inline' bij script-src is nodig voor
-# de inline Maps-loader in index.html (statische hosting = geen nonce).
+# Security headers for all static responses. The CSP has been hands-on verified
+# against Google Maps + fonts + mokum-radar photos (no violations); adjust it when
+# a new external source is added. 'unsafe-inline' in script-src is needed for
+# the inline Maps loader in index.html (static hosting = no nonce).
 [[headers]]
   for = "/*"
   [headers.values]
@@ -15,7 +15,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://maps.gstatic.com https://*.ggpht.com https://*.google.com https://mokum-radar.fly.dev https://static.vesselfinder.net; connect-src 'self' https://maps.googleapis.com https://*.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 
-# De frontend praat met de functions via /api/* (zelfde origin, dus geen CORS-gedoe).
+# The frontend talks to the functions via /api/* (same origin, so no CORS hassle).
 [[redirects]]
   from = "/api/state"
   to = "/.netlify/functions/state"

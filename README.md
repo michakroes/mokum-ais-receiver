@@ -1,35 +1,82 @@
-# matsutec-dashboard
+# Mokum AIS Receiver
 
-Read-only **cloud-weergave** van het Matsutec AR-10 AIS-station dat op een Raspberry
-Pi Zero draait (`mokum-ais`). De Pi pusht zijn live `/state` naar Netlify; deze site
-toont kaart + schepenlijst + ruwe feed, bereikbaar van overal.
+**Live: https://mokum-ais-receiver.netlify.app/**
 
-- **Frontend:** `public/index.html` (static, pollt `/api/state` elke 2s).
-- **Functions:** `netlify/functions/ingest.mjs` (Pi POST't hierheen) + `state.mjs`
-  (frontend leest), opslag via Netlify Blobs (store `ais`).
-- **Pi-kant:** `pi/cloud-push.py` + `pi/ais-cloud-push.service` (systemd).
-- **GMAPS-key** komt uit Netlify-env via `build-config.mjs` -> `public/config.js`
-  (niet in git).
+Read-only **cloud dashboard** for a private AIS receiving station in Amsterdam:
+a **Matsutec AR-10** (USB, NMEA 0183 @ 38400) running 24/7 on a Raspberry Pi
+Zero W (`mokum-ais`). The Pi pushes its live `/state` to Netlify; this site
+shows it from anywhere.
 
-Deployen + Pi-installatie: zie [DEPLOY.md](DEPLOY.md).
+## What you see
 
-## Lokaal testen (snel - localhost:8899)
+- **Map** (Google Maps) with live vessel markers — hull silhouette rotated to
+  course for moving vessels, a dot for idle ones; blue = photo available,
+  purple = no photo.
+- **Vessel list** — MMSI, name, speed, status. Names come from AIS static
+  messages, enriched via mokum-radar, with a VesselFinder fallback (marked
+  with a small `VF` badge).
+- **Click a vessel** (row or marker) for a detail card: photo, operator,
+  speed/course/type/length/class, VesselFinder link.
+- **Raw NMEA feed** — every received sentence; **click a line** for a full
+  byte-level breakdown (transport layer, 6-bit armoring, bitstream, decoded
+  AIS fields).
+- **Freshness that tells the truth**: the status pill shows push freshness,
+  and turns **amber ("quiet Xm")** when the chain is live but no AIS message
+  has been received for 3+ minutes — a reception lull, not an outage. The
+  Sentences tile always shows "last: X ago".
 
-Frontend testen zonder te deployen. Het lichte Python-servertje start in ~ms (geen
-`netlify dev`) en serveert de echte `index.html` + `config.js` (GMAPS uit `.env.local`):
+## Architecture
 
-```sh
-python3 dev/localserve.py          # /api/state = dev/sample-state.json (Pi/cloud niet nodig)
-python3 dev/localserve.py pi       # /api/state = live Pi  (mokum-ais.local:8801)
-python3 dev/localserve.py cloud    # /api/state = live Netlify-site
+```
+AR-10 ──serial──> Pi: ais-forward ──UDP──> AIS Friends + AISHub
+                           │
+                           └──UDP──> serve.py (:8801, local dashboard)
+                                        │  /state
+                                        ▼
+                              cloud-push.py ──POST /api/ingest──> Netlify Function
+                                                                      │
+                                                              Netlify Blobs (store "ais")
+                                                                      │
+                    frontend (this repo) <──GET /api/state── Netlify Function
 ```
 
-Open http://localhost:8899 (poort via `PORT=...`, env-bestand via `ENV_FILE=...`).
-Frontend aanpassen -> refresh -> zien. De kaart werkt lokaal als je Maps-key
-`http://localhost:8899/*` toestaat in de referrer-lijst.
+- **Frontend:** `public/` (static, polls `/api/state` every 2s, pauses when
+  the tab is hidden).
+- **Functions:** `netlify/functions/` — `ingest` (auth-gated write from the
+  Pi), `state` (public read, filters vessels older than 12h), `vessel`
+  (proxy to mokum-radar, keeps the read key server-side), `vf`
+  (VesselFinder name/photo fallback, cached in Blobs).
+- **Pi side:** `pi/cloud-push.py` + `pi/ais-cloud-push.service` (systemd).
+- **Secrets** (`GMAPS_KEY`, `AIS_PUSH_KEY`, `MOKUM_READ_KEY`) live in Netlify
+  env vars, never in git; `public/config.js` is generated at build time by
+  `build-config.mjs`.
 
-Alleen als je de Functions/ingest zelf moet testen is er `./dev/localtest.sh`
-(= `netlify dev --offline` + feeder, op :8888) - maar dat is traag.
+## Local development (fast — localhost:8899)
 
-Het onderliggende station (AR-10 -> `ais-forward` -> AIS Friends + AISHub + lokaal
-dashboard) leeft in het aparte `matsutec`-project op de Pi.
+Test the frontend without deploying. The lightweight Python server starts in
+milliseconds (no `netlify dev`) and serves the real `index.html` + `config.js`
+(GMAPS keys from `.env.local`):
+
+```sh
+python3 dev/localserve.py          # /api/state = dev/sample-state.json (no Pi/cloud needed)
+python3 dev/localserve.py pi       # /api/state = live Pi  (mokum-ais.local:8801)
+python3 dev/localserve.py cloud    # /api/state = live Netlify site
+```
+
+Open http://localhost:8899 (port via `PORT=...`, env file via `ENV_FILE=...`).
+Edit the frontend → refresh → see it. The map works locally if your Maps key
+allows `http://localhost:8899/*` in its referrer list.
+
+Only when you need to test the Functions/ingest themselves, use
+`./dev/localtest.sh` (= `netlify dev --offline` + a feeder, on :8888) — it is
+slow.
+
+Deploying + Pi installation: see [DEPLOY.md](DEPLOY.md).
+
+## Notes
+
+- The counters stay at 0 until the AR-10 actually receives AIS. That is
+  antenna/placement (VHF, line-of-sight, height) — not a pipeline issue.
+  Reception lulls of 10-50 minutes are normal for this station.
+- The underlying station scripts (AR-10 → forwarder → local dashboard) run on
+  the Pi and are not part of this public repo.

@@ -1,5 +1,5 @@
-// Ontvangt de /state-snapshot van de Pi en bewaart 'm in Netlify Blobs.
-// Auth via de header x-ais-key (moet gelijk zijn aan env AIS_PUSH_KEY).
+// Receives the /state snapshot from the Pi and stores it in Netlify Blobs.
+// Auth via the x-ais-key header (must equal env AIS_PUSH_KEY).
 import { getStore } from "@netlify/blobs";
 
 export default async (req) => {
