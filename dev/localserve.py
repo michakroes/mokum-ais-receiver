@@ -115,6 +115,28 @@ class H(http.server.SimpleHTTPRequestHandler):
             VF_CACHE[mmsi] = (time.time(), data)
             self._bytes(data, "application/json")
             return
+        if self.path.startswith("/api/aishub"):
+            # dev proxy for the AISHub station realtime endpoint (like netlify/functions/aishub.mjs)
+            station = os.environ.get("AISHUB_STATION", "2276")
+            try:
+                req = urllib.request.Request(
+                    f"https://www.aishub.net/station/{station}/realtime.json",
+                    headers={"User-Agent": VF_UA, "X-Requested-With": "XMLHttpRequest",
+                             "Referer": f"https://www.aishub.net/stations/{station}",
+                             "Accept": "application/json, text/javascript, */*; q=0.01"})
+                raw = json.load(urllib.request.urlopen(req, timeout=10))
+                a, b = (raw.get("class") or {}).get("a") or {}, (raw.get("class") or {}).get("b") or {}
+                self._bytes({
+                    "station": station,
+                    "stationUrl": f"https://www.aishub.net/stations/{station}",
+                    "ships": {"all": (raw.get("ships") or {}).get("all"), "unique": (raw.get("ships") or {}).get("unique")},
+                    "classA": {"number": a.get("number"), "percent": a.get("percent")},
+                    "classB": {"number": b.get("number"), "percent": b.get("percent")},
+                    "uptime": raw.get("uptime"),
+                }, "application/json")
+            except Exception as e:
+                self._bytes({"error": str(e)}, "application/json", 502)
+            return
         if self.path.startswith("/api/state"):
             try:
                 if SRC == "pi":

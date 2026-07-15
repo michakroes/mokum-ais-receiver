@@ -169,6 +169,9 @@ body.dark .glass{
 .pi-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
 .pi-row .v.warn{color:var(--amber)} .pi-row .v.bad{color:var(--red)}
 
+/* ---------- AISHub station panel (reuses .pi-stats/.pi-row grid) ---------- */
+.ah-link{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:var(--blue)}
+
 /* ---------- vessel list ---------- */
 .listcard{border-radius:var(--r-card-sm);border:.5px solid var(--hair);overflow:hidden;background:var(--card-fill)}
 .tbl-wrap{max-height:178px;overflow:auto}   /* header + 5 rows, rest scrolls */
@@ -336,7 +339,7 @@ body.dark .dt-close{color:#fff;background:rgba(255,255,255,.14)}
   .hm{display:none}                        /* hide Decoded/Bytes/Errors on mobile */
   .tbl-wrap{max-height:177px}              /* mobile: ~5 vessels visible, rest scrolls (header 27 + 5x30) */
   .fixlog{display:none}                    /* hide raw NMEA feed on mobile */
-  #piCard{display:none}                     /* hide Raspberry Pi panel on mobile (id beats [hidden] toggle) */
+  #piCard,#ahCard{display:none}             /* hide Raspberry Pi + AISHub panels on mobile (id beats [hidden] toggle) */
 }
 @media(max-width:480px){
   .stats{grid-template-columns:repeat(3,1fr);gap:7px}   /* 3-column compact */

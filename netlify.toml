@@ -35,3 +35,8 @@
   from = "/api/vf"
   to = "/.netlify/functions/vf"
   status = 200
+
+[[redirects]]
+  from = "/api/aishub"
+  to = "/.netlify/functions/aishub"
+  status = 200

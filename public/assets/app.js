@@ -204,6 +204,35 @@ function renderPi(pi){
   $("piMeta").textContent = age == null ? "" : (age < 90 ? age + "s ago" : gapTxt(age) + " ago");
 }
 
+/* ---------- AISHub station panel ----------
+   Separate slow poll (60s): our station's public status on aishub.net, via the
+   /api/aishub proxy (browser can't call aishub.net cross-origin). Hidden if the
+   proxy has nothing. */
+function renderAisHub(d){
+  const card = $("ahCard");
+  if(!d){ card.hidden = true; return; }
+  card.hidden = false;
+  $("ahMeta").textContent = d.uptime == null ? "" : d.uptime + "% uptime";
+  const n = v => v == null ? "-" : v;
+  const rows = [
+    ["In coverage", n(d.ships && d.ships.all)],
+    ["Unique", n(d.ships && d.ships.unique)],
+    ["Class A", n(d.classA && d.classA.number)],
+    ["Class B", n(d.classB && d.classB.number)],
+  ];
+  $("ahStats").innerHTML = rows.map(([l, v]) =>
+    `<div class="pi-row"><span class="l">${esc(l)}</span><span class="v">${esc(v)}</span></div>`).join("");
+  const u = d.stationUrl && safeUrl(d.stationUrl);
+  if(u) $("ahLink").href = u;
+}
+async function tickAisHub(){
+  try{
+    const r = await fetch("/api/aishub", { cache: "no-store" });
+    const d = await r.json();
+    renderAisHub(d && !d.error ? d : null);
+  }catch(e){ renderAisHub(null); }
+}
+
 /* ---------- fix log ---------- */
 let seenLines = new Set();
 let lastRaw = [];   // latest raw feed (for click -> byte breakdown + fragment reassembly)
@@ -762,7 +791,10 @@ $("rows").addEventListener("click", e => {
 
 initMap();
 tick();
+tickAisHub();
 // Only poll while the tab is visible: a hidden tab doesn't need to query the
 // cloud every 2s (saves Netlify invocations). Refresh immediately on return.
 setInterval(() => { if(!document.hidden) tick(); }, 2000);
-document.addEventListener("visibilitychange", () => { if(!document.hidden) tick(); });
+// AISHub status changes slowly + its proxy is cached 60s server-side: poll gently.
+setInterval(() => { if(!document.hidden) tickAisHub(); }, 60000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden){ tick(); tickAisHub(); } });
