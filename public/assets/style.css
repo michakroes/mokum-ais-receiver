@@ -120,10 +120,14 @@ body.dark .glass{
 
 /* ---------- deck (floating panel on the left) ---------- */
 .deck{
-  position:absolute;left:16px;top:82px;bottom:16px;width:380px;z-index:5;
+  position:absolute;left:16px;top:82px;width:380px;z-index:5;
+  max-height:calc(100% - 98px);   /* shrink to content; only scroll when taller than the viewport */
   border-radius:22px;overflow:hidden;display:flex;flex-direction:column;
 }
-.deck-scroll{overflow:auto;padding:16px 16px 18px;display:flex;flex-direction:column;gap:16px}
+.deck-scroll{overflow:auto;padding:16px 16px 18px;display:flex;flex-direction:column;gap:14px}
+/* never let a section flex-shrink to nothing: the raw NMEA feed was collapsing to 1px
+   because it had no min-height and lost the shrink race against metrics/vessels/pi */
+.deck-scroll>*{flex:0 0 auto}
 .deck-scroll::-webkit-scrollbar{width:8px}
 .deck-scroll::-webkit-scrollbar-thumb{background:var(--hair);border-radius:8px}
 
@@ -137,35 +141,37 @@ body.dark .glass{
 .seclabel .meta{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
 
 /* ---------- KPI tiles ---------- */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.stat{padding:11px 12px;border-radius:var(--r-inset);background:var(--card-fill);
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{padding:7px 10px;border-radius:var(--r-inset);background:var(--card-fill);
   border:.5px solid var(--hair);transition:transform .16s var(--ease),background .16s var(--ease)}
 .stat:hover{transform:translateY(-2px);background:var(--card-fill-hover)}
-.stat .k{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);line-height:1.25}
-.stat .big{font-family:var(--mono);font-size:23px;font-weight:600;letter-spacing:-.02em;margin-top:3px}
-.stat .sub{font-size:10px;color:var(--ink-faint);margin-top:1px}
+.stat .k{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);line-height:1.15}
+.stat .big{font-family:var(--mono);font-size:18px;font-weight:600;letter-spacing:-.02em;margin-top:2px}
+.stat .sub{display:none}   /* dense tiles: sub-labels dropped for compactness */
 .stat .sub.up{color:var(--cyan-ink)} .stat .sub.warn{color:var(--amber)} .stat .sub.bad{color:var(--red)}
 .stat.accent .big{color:var(--blue)}
 
 /* ---------- Raspberry Pi host panel ---------- */
-.pi-svc{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.pi-svc{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
 .pi-svc-item{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;
   padding:3px 9px;border-radius:999px;background:var(--card-fill);border:.5px solid var(--hair);color:var(--ink-muted)}
 .pi-svc-item .pi-dot{width:7px;height:7px;border-radius:50%;background:var(--ink-faint);flex:0 0 auto}
 .pi-svc-item.ok .pi-dot{background:var(--green);box-shadow:0 0 6px rgba(15,138,79,.5)}
 .pi-svc-item.bad{color:var(--red)}
 .pi-svc-item.bad .pi-dot{background:var(--red);box-shadow:0 0 6px rgba(255,80,60,.5)}
-.pi-stats{border-radius:var(--r-card-sm);border:.5px solid var(--hair);background:var(--card-fill);padding:2px 12px}
-.pi-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;
-  border-bottom:.5px solid var(--hair-soft);font-size:12.5px}
-.pi-row:last-child{border-bottom:0}
+.pi-stats{border-radius:var(--r-card-sm);border:.5px solid var(--hair);background:var(--card-fill);
+  padding:2px 14px;display:grid;grid-template-columns:1fr 1fr;column-gap:20px}   /* 2 columns = half the height */
+.pi-row{display:flex;justify-content:space-between;gap:8px;padding:4.5px 0;
+  border-bottom:.5px solid var(--hair-soft);font-size:12px}
+.pi-row:nth-child(even){border-left:.5px solid var(--hair-soft);padding-left:20px}   /* subtle divider between the two columns */
+.pi-row:nth-last-child(-n+2){border-bottom:0}   /* bottom row (both cells) has no divider */
 .pi-row .l{color:var(--ink-faint)}
 .pi-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
 .pi-row .v.warn{color:var(--amber)} .pi-row .v.bad{color:var(--red)}
 
 /* ---------- vessel list ---------- */
 .listcard{border-radius:var(--r-card-sm);border:.5px solid var(--hair);overflow:hidden;background:var(--card-fill)}
-.tbl-wrap{max-height:280px;overflow:auto}
+.tbl-wrap{max-height:178px;overflow:auto}   /* header + 5 rows, rest scrolls */
 table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
 th,td{padding:6px 7px;text-align:left;white-space:nowrap;border-bottom:.5px solid var(--hair-soft);overflow:hidden;text-overflow:ellipsis}
 td.mono{font-size:11.5px}
@@ -199,7 +205,7 @@ body.dark .fixlog{background:#040d1a;border-color:rgba(105,254,255,.14)}
 .fixlog .fl-head{display:flex;align-items:center;justify-content:space-between;
   padding:7px 12px;color:#cfe0ff;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   background:rgba(105,254,255,.08);border-bottom:.5px solid rgba(105,254,255,.14)}
-.fixlog .fl-body{height:150px;overflow:auto;padding:8px 12px;
+.fixlog .fl-body{height:108px;overflow:auto;padding:8px 12px;   /* ~5 lines, rest scrolls */
   font:11.5px/1.5 var(--mono);color:#bcd3ff;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 14px);mask-image:linear-gradient(180deg,transparent,#000 14px)}
 .fixlog .l{white-space:pre;opacity:.9;cursor:pointer;border-radius:5px;padding:0 4px;margin:0 -4px;transition:background .12s var(--ease)}
