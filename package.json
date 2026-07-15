@@ -1,0 +1,10 @@
+{
+  "name": "matsutec-ais-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloud read-only dashboard voor het Matsutec AR-10 AIS-station (Pi pusht /state naar Netlify Blobs).",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

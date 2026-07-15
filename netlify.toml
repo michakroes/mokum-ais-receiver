@@ -1,0 +1,15 @@
+[build]
+  command = "node build-config.mjs"
+  publish = "public"
+  functions = "netlify/functions"
+
+# De frontend praat met de functions via /api/* (zelfde origin, dus geen CORS-gedoe).
+[[redirects]]
+  from = "/api/state"
+  to = "/.netlify/functions/state"
+  status = 200
+
+[[redirects]]
+  from = "/api/ingest"
+  to = "/.netlify/functions/ingest"
+  status = 200

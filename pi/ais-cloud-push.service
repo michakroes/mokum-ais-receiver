@@ -1,0 +1,18 @@
+[Unit]
+Description=AIS cloud pusher (lokale /state -> Netlify)
+After=network-online.target ais-dashboard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/matsutec
+EnvironmentFile=/home/pi/matsutec/.cloud-push.env
+ExecStart=/usr/bin/python3 /home/pi/matsutec/cloud-push.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
