@@ -265,6 +265,47 @@ async function tickBody(){
 const TYPE_NL = { passenger:"Passagiers", cargo:"Vracht", tanker:"Tanker", service:"Dienst", "high-speed":"Snelvaart", recreational:"Recreatie", other:"Overig" };
 function typeLabel(cat, num){ return (cat && TYPE_NL[cat]) || (num != null ? "type " + num : "-"); }
 
+let detailMmsi = null;   // welk schip staat nu open (async VF-callbacks negeren stale updates)
+
+// Naam in het detailpaneel; fromVf voegt een VF-badge toe (naam altijd via esc()).
+function setDtName(name, fromVf){
+  const el = $("dtName");
+  if(fromVf) el.innerHTML = esc(name) + '<span class="pill vf" title="Naam via VesselFinder">VF</span>';
+  else el.textContent = name;
+}
+// VF-foto in dtPhoto tonen met bronvermelding. Eigen onerror voor het
+// placeholder-randgeval (dan niks tonen i.p.v. een kapot plaatje).
+function showVfPhoto(mmsi){
+  const info = vfInfo[mmsi];
+  if(!info || !info.photoUrl) return;
+  const src = safeUrl(info.photoUrl);
+  if(!src) return;
+  const ph = $("dtPhoto");
+  const img = new Image(); img.alt = "";
+  img.onload = () => {
+    if(detailMmsi !== mmsi) return;
+    ph.innerHTML = "";
+    ph.appendChild(img);
+    const cap = document.createElement("div");
+    cap.className = "dt-photo-src"; cap.textContent = "foto: VesselFinder";
+    ph.appendChild(cap);
+  };
+  img.onerror = () => {};   // VF-placeholder/404: laat dtPhoto leeg
+  img.src = src;
+}
+// VF-aanvulling voor het detailpaneel. Bewust flag-gestuurd: een falende
+// mokum-FOTO mag alleen de foto vervangen (name:false), zodat een naam die
+// mokum/AIS wel gaf niet alsnog een VF-badge krijgt. name-badge komt er enkel
+// als noch AIS (v.name) noch mokum een naam had. Stale updates genegeerd.
+async function vfApply(v, { name = false, photo = false } = {}){
+  if(detailMmsi !== v.mmsi) return;
+  const info = await vfFetch(v.mmsi);
+  if(detailMmsi !== v.mmsi || !info) return;
+  if(name && !v.name && info.name) setDtName(info.name, true);
+  if(photo && info.photoUrl) showVfPhoto(v.mmsi);
+  if(info.vesselFinderUrl){ const u = safeUrl(info.vesselFinderUrl); if(u) $("dtVf").href = u; }
+}
+
 function detailRows(v, d){
   const info = (d && d.info) || {}, live = (d && d.live) || {};
   const sog = live.sog != null ? live.sog : v.sog;
@@ -280,7 +321,9 @@ function detailRows(v, d){
 }
 function applyDetail(v, d){
   const info = d.info || {};
-  $("dtName").textContent = info.name || v.name || ("MMSI " + v.mmsi);
+  const nm = info.name || v.name;
+  if(nm) setDtName(nm, false);
+  else { setDtName("MMSI " + v.mmsi, false); vfApply(v, { name: true }); }   // geen mokum/AIS-naam -> VF-naam
   const op = $("dtOp"); op.innerHTML = "";
   if(info.operator){
     if(info.operatorLogoUrl){ const im = document.createElement("img"); im.src = MOKUM + info.operatorLogoUrl; im.onerror = () => im.remove(); op.appendChild(im); }
@@ -288,7 +331,8 @@ function applyDetail(v, d){
   }
   const ph = $("dtPhoto"); ph.innerHTML = "";
   const img = new Image(); img.alt = "";
-  img.onload = () => ph.appendChild(img);
+  img.onload = () => { if(detailMmsi === v.mmsi){ ph.innerHTML = ""; ph.appendChild(img); } };
+  img.onerror = () => { if(detailMmsi === v.mmsi) vfApply(v, { photo: true }); };   // mokum-foto faalt -> alleen VF-foto
   img.src = MOKUM + "/api/v2/vessel/" + v.mmsi + "/photo";
   const vfUrl = info.vesselFinderUrl && safeUrl(info.vesselFinderUrl);
   if(vfUrl) $("dtVf").href = vfUrl;
@@ -297,17 +341,22 @@ function applyDetail(v, d){
 }
 async function selectVessel(v){
   if(!v) return;
+  detailMmsi = v.mmsi;
   $("detail").hidden = false;
   $("dtPhoto").innerHTML = ""; $("dtOp").innerHTML = ""; $("dtNote").textContent = "";
-  $("dtName").textContent = v.name || ("MMSI " + v.mmsi);
+  // meteen een reeds bekende VF-naam tonen (badge); anders AIS-naam of MMSI
+  const known = vfInfo[v.mmsi];
+  if(!v.name && known && known.name) setDtName(known.name, true);
+  else setDtName(v.name || ("MMSI " + v.mmsi), false);
   const vf = $("dtVf"); vf.href = "https://www.vesselfinder.com/?mmsi=" + v.mmsi; vf.hidden = false;
   detailRows(v, null);
   try{
     const r = await fetch("/api/vessel?mmsi=" + encodeURIComponent(v.mmsi), { cache: "no-store" });
     const d = await r.json();
+    if(detailMmsi !== v.mmsi) return;   // ondertussen ander schip aangeklikt
     if(d && !d.error) applyDetail(v, d);
-    else $("dtNote").textContent = "Geen extra info bij mokum-radar.";
-  }catch(e){ $("dtNote").textContent = "Detail-info niet beschikbaar."; }
+    else { $("dtNote").textContent = "Geen extra info bij mokum-radar."; vfApply(v, { name: true, photo: true }); }
+  }catch(e){ if(detailMmsi === v.mmsi){ $("dtNote").textContent = "Detail-info niet beschikbaar."; vfApply(v, { name: true, photo: true }); } }
 }
 $("dtClose").addEventListener("click", () => { $("detail").hidden = true; });
 $("rows").addEventListener("click", e => {

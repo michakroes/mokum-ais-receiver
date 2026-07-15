@@ -168,6 +168,10 @@ tr.vrow:hover td{background:var(--card-fill-hover)}
 .pill.mv{background:var(--t-keep-bg);color:var(--t-keep-ink)}
 .pill.st{background:var(--card-fill);color:var(--ink-muted)}
 .pill.no{background:var(--t-warn-bg);color:var(--t-warn-ink)}
+/* VF-badge: naam komt van VesselFinder (gedempt paars, licht+donker leesbaar) */
+.pill.vf{margin-left:6px;font-size:9px;padding:1px 6px;vertical-align:middle;
+  background:rgba(124,58,237,.14);color:#6d28d9;font-weight:700}
+body.dark .pill.vf{background:rgba(157,120,255,.20);color:#c8b6ff}
 
 /* ---------- fix-log (ruwe NMEA) ---------- */
 .fixlog{border-radius:var(--r-card-sm);overflow:hidden;background:var(--navy);
@@ -193,8 +197,12 @@ body.dark .fixlog{background:#040d1a;border-color:rgba(105,254,255,.14)}
   font-size:16px;line-height:1;color:var(--ink);background:rgba(9,28,53,.10);transition:background .15s var(--ease)}
 body.dark .dt-close{color:#fff;background:rgba(255,255,255,.14)}
 .dt-close:hover{background:rgba(255,80,60,.22);color:var(--red)}
-.dt-photo{background:var(--card-fill)}
+.dt-photo{background:var(--card-fill);position:relative}
 .dt-photo img{display:block;width:100%;height:150px;object-fit:cover}
+/* bronvermelding op de VF-foto */
+.dt-photo-src{position:absolute;right:6px;bottom:6px;font-size:9px;font-weight:600;
+  letter-spacing:.02em;color:#fff;background:rgba(9,28,53,.62);
+  padding:2px 7px;border-radius:999px;backdrop-filter:blur(2px)}
 .dt-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:2px}
 .dt-name{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2;padding-right:22px}
 .dt-op{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-muted);min-height:16px}

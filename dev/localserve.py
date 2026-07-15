@@ -10,7 +10,7 @@ Serveert public/ + /config.js (GMAPS uit .env.local) + /api/state uit een bron:
 Open http://localhost:8899  (poort via PORT=..., env-bestand via ENV_FILE=...).
 Frontend aanpassen -> refresh. Ctrl+C stopt.
 """
-import http.server, socketserver, os, sys, json, urllib.request
+import http.server, socketserver, os, sys, json, re, time, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PUBLIC = os.path.join(HERE, "..", "public")
@@ -34,6 +34,36 @@ def envval(key):
 
 
 GKEY, GID = envval("GMAPS_KEY"), envval("GMAPS_ID")
+
+# Dev-proxy voor /api/vf: scrapet VesselFinder direct (zoals netlify/functions/vf.mjs,
+# maar zonder Netlify Blobs - hier een simpele in-memory cache). Zo werkt de
+# VF-fallback in de Claude-preview zonder de trage `netlify dev`.
+VF_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+VF_CACHE = {}   # mmsi -> (fetchedAt, {name, photoUrl, vesselFinderUrl})
+
+
+def vf_scrape(mmsi):
+    url = f"https://www.vesselfinder.com/vessels/details/{mmsi}"
+    name, photo = None, None
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": VF_UA, "Accept-Language": "en-US,en;q=0.9"})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            if r.status == 200:
+                html = r.read().decode("utf-8", "replace")
+                m = re.search(r"<title>([^<]*)</title>", html, re.I)
+                if m:
+                    t = m.group(1).strip()
+                    cand = t.split(",", 1)[0].strip() if "," in t else (t.split(" - ", 1)[0].strip() if " - " in t else "")
+                    if cand and not re.match(r"(?i)^error\b", cand) and not re.match(r"(?i)^vessels?$", cand) \
+                       and "vesselfinder" not in cand.lower():
+                        name = cand
+                pm = re.search(r"https://static\.vesselfinder\.net/ship-photo/0-\d+-[0-9a-f]+/\d+(?:\?v\d+)?", html, re.I)
+                if pm:
+                    photo = pm.group(0)
+    except Exception:
+        pass
+    return {"name": name, "photoUrl": photo, "vesselFinderUrl": url}
 
 
 class H(http.server.SimpleHTTPRequestHandler):
@@ -72,6 +102,18 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self._bytes(data, "application/json")
             except Exception as e:
                 self._bytes({"error": str(e)}, "application/json", 502)
+            return
+        if self.path.startswith("/api/vf"):
+            from urllib.parse import urlparse, parse_qs
+            mmsi = "".join(c for c in (parse_qs(urlparse(self.path).query).get("mmsi", [""])[0]) if c.isdigit())[:9]
+            if not mmsi:
+                self._bytes({"error": "mmsi ontbreekt"}, "application/json", 400); return
+            hit = VF_CACHE.get(mmsi)
+            if hit and (time.time() - hit[0]) < 86400:
+                self._bytes({**hit[1], "cached": True}, "application/json"); return
+            data = vf_scrape(mmsi)
+            VF_CACHE[mmsi] = (time.time(), data)
+            self._bytes(data, "application/json")
             return
         if self.path.startswith("/api/state"):
             try:
