@@ -3,3 +3,4 @@ public/config.js
 .cloud-push.env
 .netlify/
 .DS_Store
+.env
