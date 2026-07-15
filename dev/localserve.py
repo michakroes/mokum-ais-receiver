@@ -92,7 +92,10 @@ class H(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    socketserver.TCPServer.allow_reuse_address = True
+    # ThreadingHTTPServer: elke request in een eigen thread, zodat browser-polls +
+    # proxy-calls elkaar niet blokkeren (single-threaded stalt onder belasting).
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
+    http.server.ThreadingHTTPServer.daemon_threads = True
     print(f"lokale dev-server: http://localhost:{PORT}  (bron /api/state = {SRC})")
-    with socketserver.TCPServer(("127.0.0.1", PORT), H) as httpd:
+    with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), H) as httpd:
         httpd.serve_forever()

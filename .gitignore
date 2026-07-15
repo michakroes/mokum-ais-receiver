@@ -4,3 +4,9 @@ public/config.js
 .netlify/
 .DS_Store
 .env
+
+# lokaal (niet in de publieke web-repo)
+.env.local
+/station/
+CLAUDE.md
+.claude/

@@ -39,8 +39,11 @@ function checkPhoto(mmsi){
   img.onload = () => { photoCache[mmsi] = true; };   // foto bestaat -> blauw bij de volgende tick
   img.src = MOKUM + "/api/v2/vessel/" + mmsi + "/photo";
 }
-// foto = blauw, geen foto = paars
-function vesselColor(mmsi){ return photoCache[mmsi] ? "#3366FF" : "#7C3AED"; }
+// foto = accent (blauw in light, neon in dark), geen foto = paars
+function vesselColor(mmsi){
+  const accent = getComputedStyle(document.body).getPropertyValue("--blue").trim() || "#3366FF";
+  return photoCache[mmsi] ? accent : "#7C3AED";
+}
 
 async function initMap(){
   if(!window.GMAPS_KEY){ $("map").innerHTML = '<div class="maperr">Geen GMAPS_KEY geladen - kan Google Maps niet tonen.</div>'; return; }
