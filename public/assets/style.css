@@ -160,14 +160,21 @@ body.dark .glass{
 .pi-svc-item.bad{color:var(--red)}
 .pi-svc-item.bad .pi-dot{background:var(--red);box-shadow:0 0 6px rgba(255,80,60,.5)}
 .pi-stats{border-radius:var(--r-card-sm);border:.5px solid var(--hair);background:var(--card-fill);
-  padding:2px 14px;display:grid;grid-template-columns:1fr 1fr;column-gap:20px}   /* 2 columns = half the height */
-.pi-row{display:flex;justify-content:space-between;gap:8px;padding:4.5px 0;
+  padding:2px 12px;display:grid;grid-template-columns:1fr 1fr;column-gap:14px}   /* 2 columns = half the height */
+.pi-row{display:flex;justify-content:space-between;gap:8px;padding:4.5px 0;white-space:nowrap;
   border-bottom:.5px solid var(--hair-soft);font-size:12px}
-.pi-row:nth-child(even){border-left:.5px solid var(--hair-soft);padding-left:20px}   /* subtle divider between the two columns */
+.pi-row:nth-child(even){border-left:.5px solid var(--hair-soft);padding-left:14px}   /* subtle divider between the two columns */
 .pi-row:nth-last-child(-n+2){border-bottom:0}   /* bottom row (both cells) has no divider */
-.pi-row .l{color:var(--ink-faint)}
+.pi-row .l{color:var(--ink-faint);min-width:0}
 .pi-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+/* value text stays normal; the dot carries the status. Only warn/bad tint the number for extra emphasis. */
 .pi-row .v.warn{color:var(--amber)} .pi-row .v.bad{color:var(--red)}
+/* traffic-light dot in front of every Pi stat (green ok / amber warn / red bad) */
+.pi-vdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;
+  background:var(--ink-faint);flex:0 0 auto}
+.pi-vdot.ok{background:var(--green);box-shadow:0 0 6px rgba(15,138,79,.45)}
+.pi-vdot.warn{background:var(--amber);box-shadow:0 0 6px rgba(180,83,9,.45)}
+.pi-vdot.bad{background:var(--red);box-shadow:0 0 6px rgba(255,80,60,.5)}
 
 /* ---------- AISHub station panel (reuses .pi-stats/.pi-row grid) ---------- */
 .ah-view{margin-left:8px;font-size:11px;font-weight:600;color:var(--blue);letter-spacing:0;text-transform:none}

@@ -189,16 +189,26 @@ function renderPi(pi){
     return `<span class="pi-svc-item ${ok ? "ok" : "bad"}" title="${esc(k)}: ${esc(st)}"><span class="pi-dot"></span>${PI_SVC_LABEL[k]}</span>`;
   }).join("");
 
+  // traffic-light level per stat: "ok" (green) / "warn" (amber) / "bad" (red).
   const th = pi.throttled;
+  const ncpu = pi.ncpu || 1;
+  const memPct = (pi.mem_used_mb != null && pi.mem_total_mb) ? pi.mem_used_mb / pi.mem_total_mb * 100 : null;
   const rows = [];
-  if(pi.uptime_s != null) rows.push(["Uptime", fmtUptime(pi.uptime_s)]);
-  if(pi.load1 != null) rows.push(["CPU load", pi.load1.toFixed(2) + (pi.ncpu ? " / " + pi.ncpu : ""), pi.ncpu && pi.load1 > pi.ncpu ? "warn" : ""]);
-  if(pi.mem_used_mb != null && pi.mem_total_mb) rows.push(["RAM", pi.mem_used_mb + " / " + pi.mem_total_mb + " MB", pi.mem_used_mb / pi.mem_total_mb > 0.9 ? "warn" : ""]);
-  if(pi.disk_pct != null) rows.push(["Disk", pi.disk_pct + "%", pi.disk_pct >= 90 ? "bad" : pi.disk_pct >= 80 ? "warn" : ""]);
-  if(pi.temp_c != null) rows.push(["CPU temp", pi.temp_c + "°C", pi.temp_c >= 75 ? "bad" : pi.temp_c >= 65 ? "warn" : ""]);
-  if(th) rows.push(["Power", th.status === "ok" ? "OK" : th.status === "warn" ? "throttled (past)" : "throttling now", th.status === "ok" ? "" : th.status]);
-  $("piStats").innerHTML = rows.map(([l, v, cls]) =>
-    `<div class="pi-row"><span class="l">${esc(l)}</span><span class="v ${cls || ""}">${esc(v)}</span></div>`).join("");
+  if(pi.uptime_s != null) rows.push(["Uptime", fmtUptime(pi.uptime_s), "ok"]);
+  if(pi.load1 != null) rows.push(["CPU load", pi.load1.toFixed(2) + (pi.ncpu ? " / " + pi.ncpu : ""),
+    pi.load1 > 2 * ncpu ? "bad" : pi.load1 > ncpu ? "warn" : "ok"]);
+  if(memPct != null) rows.push(["RAM", pi.mem_used_mb + " / " + pi.mem_total_mb + " MB",
+    memPct > 90 ? "bad" : memPct >= 80 ? "warn" : "ok"]);
+  if(pi.disk_pct != null) rows.push(["Disk", pi.disk_pct + "%",
+    pi.disk_pct >= 90 ? "bad" : pi.disk_pct >= 80 ? "warn" : "ok"]);
+  if(pi.temp_c != null) rows.push(["CPU temp", pi.temp_c + "°C",
+    pi.temp_c >= 75 ? "bad" : pi.temp_c >= 60 ? "warn" : "ok"]);
+  // short text keeps the row on one line in the narrow column; the dot colour
+  // already distinguishes past (amber) from now (red).
+  if(th) rows.push(["Power", th.status === "ok" ? "OK" : th.status === "warn" ? "throttled" : "throttling",
+    th.status === "ok" ? "ok" : th.status === "warn" ? "warn" : "bad"]);
+  $("piStats").innerHTML = rows.map(([l, v, lvl]) =>
+    `<div class="pi-row"><span class="l"><span class="pi-vdot ${lvl}"></span>${esc(l)}</span><span class="v ${lvl}">${esc(v)}</span></div>`).join("");
 
   const age = pi.at ? Math.max(0, Math.round(Date.now() / 1000 - pi.at)) : null;
   $("piMeta").textContent = age == null ? "" : (age < 90 ? age + "s ago" : gapTxt(age) + " ago");
