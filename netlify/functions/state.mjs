@@ -21,9 +21,9 @@ export default async () => {
 
   const ageSec = Math.max(0, Math.round((Date.now() - (doc.receivedAt || 0)) / 1000));
 
-  // Drop vessels that had no contact for more than 12h (VESSEL_MAX_AGE_H).
+  // Drop vessels that had no contact for more than 1h (VESSEL_MAX_AGE_H).
   const state = { ...(doc.state || {}) };
-  const maxAgeS = (Number(process.env.VESSEL_MAX_AGE_H) || 12) * 3600;
+  const maxAgeS = (Number(process.env.VESSEL_MAX_AGE_H) || 1) * 3600;
   const nowS = Date.now() / 1000;
   if (Array.isArray(state.vessels)) {
     state.vessels = state.vessels.filter(v => v.last_seen == null || (nowS - v.last_seen) <= maxAgeS);

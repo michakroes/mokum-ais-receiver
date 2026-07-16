@@ -40,7 +40,7 @@ const AMS = { lat: 52.37, lng: 4.90 };
 let gmap = null, AdvMarker = null, mapReady = false;
 const markers = {};
 let lastVessels = {};   // mmsi -> vessel (for click->detail)
-let filterMaxAgeSec = 12 * 3600;   // slider: hide vessels whose last fix is older than this (12h = show all, = server cap)
+let filterMaxAgeSec = 60 * 60;   // slider: hide vessels whose last fix is older than this (60m = show all, = server cap)
 let lastState = null, lastFr = null;   // last render, so the slider can re-filter without waiting for a new poll
 
 const MOKUM = "https://mokum-radar.fly.dev";
@@ -668,7 +668,7 @@ function renderVessels(s, fr){
   const rows = $("rows");
   if(!vessels.length){
     const msg = all.length
-      ? `No vessel with a fix in the last ${filterMaxAgeSec / 3600 | 0}h.`
+      ? `No vessel with a fix in the last ${filterMaxAgeSec / 60 | 0}m.`
       : (fr.on ? "Waiting for first vessel (reception)&hellip;" : "No recent data from the station.");
     rows.innerHTML = `<tr><td colspan="4" class="empty">${msg}</td></tr>`;
   } else {
@@ -822,13 +822,13 @@ $("rows").addEventListener("click", e => {
   if(tr) selectVessel(lastVessels[tr.dataset.mmsi]);
 });
 
-// Age slider: hide vessels (list + map) whose last fix is older than the chosen hours.
+// Age slider: hide vessels (list + map) whose last fix is older than the chosen minutes.
 const ageSlider = $("ageSlider");
 if(ageSlider){
   const applyAge = () => {
-    const h = +ageSlider.value;
-    filterMaxAgeSec = h * 3600;
-    $("ageSliderLbl").textContent = h + "h";
+    const m = +ageSlider.value;
+    filterMaxAgeSec = m * 60;
+    $("ageSliderLbl").textContent = m + "m";
     if(lastState) renderVessels(lastState, lastFr);   // re-filter now, don't wait for the next poll
   };
   ageSlider.addEventListener("input", applyAge);
