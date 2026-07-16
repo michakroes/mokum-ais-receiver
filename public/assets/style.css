@@ -74,7 +74,13 @@ body.dark .glass{
 }
 
 /* ---------- map hero ---------- */
-#map{position:absolute;inset:0;background:var(--page)}
+/* position needs !important: the Google Maps API pins the container's position
+   INLINE at init (position:relative when it boots under the <=820px layout);
+   crossing the breakpoint upward, that inline pin would otherwise beat this rule
+   and collapse the map to 0px. Same for the <=820px override further down -
+   between !important rules of equal specificity the later one wins, so the
+   mobile block still takes over below the breakpoint. */
+#map{position:absolute!important;inset:0;background:var(--page)}
 .maperr{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;
   color:var(--t-leg-ink);background:var(--t-leg-bg);font-size:13px}
 
@@ -344,7 +350,7 @@ body.dark .dt-close{color:#fff;background:rgba(255,255,255,.14)}
      height). Deck content overflow (small/landscape screens) scrolls INSIDE the
      deck via .deck-scroll, never the page. */
   body{overflow:hidden;height:100vh;height:100dvh;display:flex;flex-direction:column}
-  #map{position:relative;inset:auto;flex:1 1 auto;min-height:160px}
+  #map{position:relative!important;inset:auto;flex:1 1 auto;min-height:160px}
   .deck{position:static;inset:auto;width:auto;margin:8px 10px calc(10px + env(safe-area-inset-bottom));
     top:auto;bottom:auto;max-height:none;flex:0 1 auto;min-height:0}
   .deck-scroll{padding:13px;gap:12px}
