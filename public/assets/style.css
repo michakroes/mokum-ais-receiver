@@ -131,14 +131,23 @@ body.dark .glass{
 .deck-scroll::-webkit-scrollbar{width:8px}
 .deck-scroll::-webkit-scrollbar-thumb{background:var(--hair);border-radius:8px}
 
-.deck-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.deck-head .title{font-size:15px;font-weight:600;letter-spacing:-.01em}
-.deck-head .sub{font-size:11px;color:var(--ink-muted)}
 
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
 .seclabel{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px}
 .seclabel h2{margin:0;font-size:13px;font-weight:600;letter-spacing:-.01em}
 .seclabel .meta{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+
+/* ---------- vessel age filter (slider) ---------- */
+.vfilter{display:flex;align-items:center;gap:9px;margin:5px 0 8px}
+.vfilter-cap{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+.vfilter-val{font-size:11px;font-weight:600;color:var(--cyan-ink);min-width:26px;text-align:right}
+.vfilter input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;height:3px;border-radius:999px;
+  background:var(--hair);outline:none;cursor:pointer;margin:0}
+.vfilter input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--cyan);border:2px solid var(--page);box-shadow:0 1px 3px rgba(9,28,53,.35);cursor:pointer}
+.vfilter input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--cyan);
+  border:2px solid var(--page);box-shadow:0 1px 3px rgba(9,28,53,.35);cursor:pointer}
+.vfilter input[type=range]:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
 /* ---------- KPI tiles ---------- */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -338,13 +347,12 @@ body.dark .dt-close{color:#fff;background:rgba(255,255,255,.14)}
   .ab{left:10px;right:10px}
   .ab-sub{display:none}
   /* more compact deck */
-  .deck-head .title{font-size:14px}
   .stat{padding:8px 9px}
   .stat .k{font-size:8.5px;letter-spacing:.04em}
   .stat .big{font-size:18px;margin-top:2px}
   .stat .sub{display:none}                 /* sub-labels removed = shorter */
   .hm{display:none}                        /* hide Decoded/Bytes/Errors on mobile */
-  .tbl-wrap{max-height:177px}              /* mobile: ~5 vessels visible, rest scrolls (header 27 + 5x30) */
+  .tbl-wrap{max-height:117px}              /* mobile: ~3 vessels visible, rest scrolls (header 27 + 3x30) */
   .fixlog{display:none}                    /* hide raw NMEA feed on mobile */
   #piCard,#ahCard{display:none}             /* hide Raspberry Pi + AISHub panels on mobile (id beats [hidden] toggle) */
 }

@@ -40,6 +40,8 @@ const AMS = { lat: 52.37, lng: 4.90 };
 let gmap = null, AdvMarker = null, mapReady = false;
 const markers = {};
 let lastVessels = {};   // mmsi -> vessel (for click->detail)
+let filterMaxAgeSec = 12 * 3600;   // slider: hide vessels whose last fix is older than this (12h = show all, = server cap)
+let lastState = null, lastFr = null;   // last render, so the slider can re-filter without waiting for a new poll
 
 const MOKUM = "https://mokum-radar.fly.dev";
 const photoCache = {};   // mmsi -> true (has photo) / false (no photo)
@@ -632,7 +634,6 @@ async function tickBody(){
   $("lastMsgSub").textContent = gap == null ? "received" : `last: ${gapTxt(gap)} ago`;
   $("ageMeta").textContent = s._ageSec == null ? "-" : (s._ageSec + "s ago");
   renderPi(s.pi);
-  $("port").textContent = s.serial_port || "-";
   $("sentences").textContent = s.sentences || 0;
   $("decoded").textContent = s.decoded || 0;
   $("spmSub").textContent = (s.sentences_per_sec || 0) + "/s";
@@ -643,12 +644,33 @@ async function tickBody(){
   $("typesMeta").textContent = (s.types && Object.keys(s.types).length)
     ? Object.entries(s.types).sort((a,b)=>a[0]-b[0]).map(([k,v])=>`t${k}:${v}`).join(" ") : "-";
 
-  const vessels = s.vessels || [];
-  lastVessels = {}; vessels.forEach(v => { lastVessels[v.mmsi] = v; });
-  $("shipMeta").textContent = vessels.length ? `${vessels.length} visible` : "newest first";
+  lastState = s; lastFr = fr;
+  renderVessels(s, fr);
+
+  renderFeed(s.raw || []);
+}
+
+/* Vessel list + map markers, filtered by the age slider. Split out of tickBody so
+   moving the slider can re-render instantly from lastState (no new /api/state poll). */
+function vesselShown(v){
+  // missing last_seen -> always show (never seen on real data, but don't hide on a gap)
+  if(v.last_seen == null) return true;
+  return (Date.now() / 1000 - v.last_seen) <= filterMaxAgeSec;
+}
+function renderVessels(s, fr){
+  const all = s.vessels || [];
+  lastVessels = {}; all.forEach(v => { lastVessels[v.mmsi] = v; });   // keep ALL for open-detail lookups
+  const vessels = all.filter(vesselShown);
+  const hidden = all.length - vessels.length;
+  $("shipMeta").textContent = all.length
+    ? (hidden ? `${vessels.length} of ${all.length}` : `${vessels.length} visible`)
+    : "newest first";
   const rows = $("rows");
   if(!vessels.length){
-    rows.innerHTML = `<tr><td colspan="4" class="empty">${fr.on ? "Waiting for first vessel (reception)&hellip;" : "No recent data from the station."}</td></tr>`;
+    const msg = all.length
+      ? `No vessel with a fix in the last ${filterMaxAgeSec / 3600 | 0}h.`
+      : (fr.on ? "Waiting for first vessel (reception)&hellip;" : "No recent data from the station.");
+    rows.innerHTML = `<tr><td colspan="4" class="empty">${msg}</td></tr>`;
   } else {
     rows.innerHTML = vessels.map(v => {
       const moving = (v.sog != null && v.sog >= 0.5);
@@ -692,8 +714,6 @@ async function tickBody(){
       Object.keys(markers).forEach(m => { if(!seen[m]){ markers[m].map = null; delete markers[m]; } });
     }catch(e){ /* map error ignored - feed/list keep working */ }
   }
-
-  renderFeed(s.raw || []);
 }
 
 /* ---------- click vessel -> detail via mokum-radar proxy ---------- */
@@ -745,9 +765,12 @@ function detailRows(v, d){
   const info = (d && d.info) || {}, live = (d && d.live) || {};
   const sog = live.sog != null ? live.sog : v.sog;
   const cog = live.cog != null ? live.cog : v.cog;
+  // last AIS fix for THIS vessel (Pi clock ~ browser clock, same basis as the state pill)
+  const lastFix = v.last_seen ? gapTxt(Math.max(0, Date.now() / 1000 - v.last_seen)) + " ago" : "-";
   const rows = [
     ["Speed", sog == null ? "-" : fmt(sog) + " kn"],
     ["Course", (cog == null || cog >= 360) ? "-" : Math.round(cog) + "°"],
+    ["Last fix", lastFix],
     ["Type", typeLabel(info.shipCategory, info.shipType)],
     ["Length", info.lengthM ? info.lengthM + " m" : "-"],
     ["Class", info.aisClass ? "Class " + info.aisClass : "-"],
@@ -798,6 +821,19 @@ $("rows").addEventListener("click", e => {
   const tr = e.target.closest("tr[data-mmsi]");
   if(tr) selectVessel(lastVessels[tr.dataset.mmsi]);
 });
+
+// Age slider: hide vessels (list + map) whose last fix is older than the chosen hours.
+const ageSlider = $("ageSlider");
+if(ageSlider){
+  const applyAge = () => {
+    const h = +ageSlider.value;
+    filterMaxAgeSec = h * 3600;
+    $("ageSliderLbl").textContent = h + "h";
+    if(lastState) renderVessels(lastState, lastFr);   // re-filter now, don't wait for the next poll
+  };
+  ageSlider.addEventListener("input", applyAge);
+  applyAge();
+}
 
 initMap();
 tick();

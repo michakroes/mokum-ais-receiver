@@ -32,11 +32,6 @@
 
 <aside class="deck glass">
   <div class="deck-scroll">
-    <div class="deck-head">
-      <div><div class="eyebrow">Station</div><div class="title">AR-10 reception</div></div>
-      <div class="sub">port <span class="mono" id="port">-</span></div>
-    </div>
-
     <div>
       <div class="seclabel"><h2>Metrics</h2><span class="meta" id="ageMeta">-</span></div>
       <div class="stats">
@@ -51,6 +46,11 @@
 
     <div>
       <div class="seclabel"><h2>Vessels</h2><span class="meta" id="shipMeta">newest first</span></div>
+      <div class="vfilter">
+        <span class="vfilter-cap">Last fix within</span>
+        <input type="range" id="ageSlider" min="1" max="12" step="1" value="12" aria-label="Hide vessels whose last fix is older than this many hours">
+        <span class="vfilter-val mono" id="ageSliderLbl">12h</span>
+      </div>
       <div class="listcard"><div class="tbl-wrap">
         <table><thead><tr><th>MMSI</th><th>Name</th><th>SOG</th><th>Status</th></tr></thead>
         <tbody id="rows"><tr><td colspan="4" class="empty">Connecting to station&hellip;</td></tr></tbody></table>
