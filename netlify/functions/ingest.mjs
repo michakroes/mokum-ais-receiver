@@ -1,6 +1,7 @@
 // Receives the /state snapshot from the Pi and stores it in Netlify Blobs.
 // Auth via the x-ais-key header (must equal env AIS_PUSH_KEY).
 import { getStore } from "@netlify/blobs";
+import { forwardToMastchain } from "./lib/mastchain.mjs";
 
 export default async (req) => {
   if (req.method !== "POST") {
@@ -20,6 +21,9 @@ export default async (req) => {
 
   const store = getStore("ais");
   await store.setJSON("latest", { receivedAt: Date.now(), state });
+
+  // Best-effort relay of new sentences to MastChain (no-op without MASTCHAIN_USERPWD).
+  await forwardToMastchain(store, state);
 
   return new Response("ok");
 };
