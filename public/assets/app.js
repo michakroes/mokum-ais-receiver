@@ -40,7 +40,7 @@ const AMS = { lat: 52.37, lng: 4.90 };
 let gmap = null, AdvMarker = null, mapReady = false;
 const markers = {};
 let lastVessels = {};   // mmsi -> vessel (for click->detail)
-let filterMaxAgeSec = 60 * 60;   // slider: hide vessels whose last fix is older than this (60m = show all, = server cap)
+let filterMaxAgeSec = 5 * 60;   // slider: hide vessels whose last fix is older than this (default 5m; 60m = server cap)
 let lastState = null, lastFr = null;   // last render, so the slider can re-filter without waiting for a new poll
 
 const MOKUM = "https://mokum-radar.fly.dev";
