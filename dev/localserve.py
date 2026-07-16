@@ -70,6 +70,13 @@ class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=os.path.abspath(PUBLIC), **k)
 
+    def end_headers(self):
+        # no-store on EVERYTHING, including static files served by the parent
+        # class: the in-app/preview browser otherwise heuristic-caches app.js/
+        # style.css and renders a stale frontend during dev.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def _bytes(self, body, ctype, code=200):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode()
@@ -77,7 +84,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             body = body.encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
-        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -145,6 +151,19 @@ class H(http.server.SimpleHTTPRequestHandler):
                     data = json.load(urllib.request.urlopen(CLOUD_URL, timeout=8))
                 else:
                     data = json.load(open(SAMPLE)); data["_ageSec"] = 1
+                    # Rebase the fixture's timestamps to "now" (keeping their
+                    # relative spacing) so the frontend's 12h age filter never
+                    # hides the sample vessels as the file gets older.
+                    ts = ([r.get("t") for r in data.get("raw", [])]
+                          + [v.get("last_seen") for v in data.get("vessels", [])]
+                          + [(data.get("pi") or {}).get("at")])
+                    ref = max(t for t in ts if t)
+                    shift = int(time.time()) - ref
+                    for r in data.get("raw", []):
+                        if r.get("t"): r["t"] += shift
+                    for v in data.get("vessels", []):
+                        if v.get("last_seen"): v["last_seen"] += shift
+                    if (data.get("pi") or {}).get("at"): data["pi"]["at"] += shift
                 self._bytes(data, "application/json")
             except Exception as e:
                 self._bytes({"error": str(e)}, "application/json", 502)
