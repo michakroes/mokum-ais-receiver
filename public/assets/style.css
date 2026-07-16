@@ -306,6 +306,22 @@ body.dark .nm-bhex{background:rgba(255,255,255,.06)}
   .nm-tbl .nm-bits{display:none}          /* hide raw-bits column on narrow screens */
 }
 
+/* ---------- message-type explainer (click the T-counters) ---------- */
+#typesMeta{cursor:pointer;border-bottom:1px dotted rgba(207,224,255,.45)}
+#typesMeta:hover,#typesMeta:focus-visible{color:#fff;border-bottom-color:#fff;outline:none}
+.tt-grid{font-size:12px}
+.tt-row{display:grid;grid-template-columns:44px 56px 1fr;gap:0 14px;
+  padding:7px 0;border-bottom:.5px solid var(--hair-soft);align-items:baseline}
+.tt-row:last-child{border-bottom:0}
+.tt-row.tt-head{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:0 0 6px;border-bottom:.5px solid var(--hair)}
+.tt-t{color:var(--ink-muted)}
+.tt-n{text-align:right;color:var(--ink)}
+.tt-row.tt-head span:nth-child(2){text-align:right}
+.tt-m{font-weight:600;color:var(--ink)}
+.tt-dim{opacity:.42}
+.tt-seen .tt-t,.tt-seen .tt-n{font-weight:700;color:var(--cyan-ink)}
+
 /* ---------- detail card (click on a vessel) ---------- */
 .detail{position:absolute;right:16px;top:82px;width:300px;z-index:6;border-radius:22px;overflow:hidden;
   display:flex;flex-direction:column;animation:dt-in .18s var(--spring)}

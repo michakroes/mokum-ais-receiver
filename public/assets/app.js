@@ -537,6 +537,7 @@ function fieldTable(fields){
 function openNmeaModal(rec){
   const line = String(rec.line || "");
   const m = ensureModal();
+  m.querySelector(".nm-card").setAttribute("aria-label", "NMEA byte breakdown");   // shared with the types modal
   const p = parseNmea(line);
   const asm = assemblePayload(p);
   const ab = armorBits(asm.payload, asm.fillBits);
@@ -597,6 +598,62 @@ function talkerNote(t){
   if(t === "!AIVDO") return "AIS from own station";
   return t.startsWith("!") || t.startsWith("$") ? "NMEA 0183 sentence" : "";
 }
+
+/* ---------- AIS message-type explainer (click the T-counters in the feed header) ---------- */
+const AIS_TYPES = [
+  [1,  "Position report (Class A)", "Scheduled position from a commercial/SOLAS vessel: lat/lon, SOG, COG, heading, nav status."],
+  [2,  "Position report (Class A, assigned)", "Same as type 1, but on a transmit schedule assigned by a base station."],
+  [3,  "Position report (Class A, polled)", "Same as type 1, sent in response to an interrogation."],
+  [4,  "Base station report", "A shore station broadcasting its own position and UTC time."],
+  [5,  "Static & voyage data (Class A)", "Name, callsign, IMO, dimensions, ship type, destination, ETA, draught."],
+  [6,  "Binary addressed message", "Application data sent to one specific MMSI."],
+  [7,  "Binary acknowledge", "Receipt confirmation for type 6."],
+  [8,  "Binary broadcast", "Application data for everyone, e.g. inland-AIS or meteo/hydro messages."],
+  [9,  "SAR aircraft position", "Position report from a search-and-rescue aircraft."],
+  [10, "UTC/date inquiry", "Request for UTC time from another station."],
+  [11, "UTC/date response", "Reply to type 10."],
+  [12, "Safety message (addressed)", "Short safety-related text to one MMSI."],
+  [13, "Safety acknowledge", "Receipt confirmation for type 12."],
+  [14, "Safety broadcast", "Short safety-related text to everyone."],
+  [15, "Interrogation", "Request for specific message types from another station."],
+  [16, "Assignment mode command", "Base station assigning a transmit schedule to stations."],
+  [17, "DGNSS broadcast", "Differential GNSS corrections from a shore station."],
+  [18, "Position report (Class B)", "Position from a Class B transponder: pleasure craft, small vessels."],
+  [19, "Extended position (Class B)", "Class B position plus name and dimensions in one message (rare)."],
+  [20, "Data link management", "Base station reserving transmit slots in the TDMA cycle."],
+  [21, "Aids-to-navigation", "Position/status of buoys, beacons and virtual AtoNs."],
+  [22, "Channel management", "Base station steering which VHF channels to use in an area."],
+  [23, "Group assignment", "Base station commanding a group of stations at once."],
+  [24, "Static data (Class B)", "Name (part A) and type/dimensions (part B) of a Class B vessel."],
+  [25, "Single-slot binary", "Short binary application data (rare)."],
+  [26, "Multi-slot binary", "Longer binary application data (rare)."],
+  [27, "Long-range position", "Compressed position meant for satellite reception; rare to catch terrestrially."],
+];
+function openTypesModal(){
+  const m = ensureModal();
+  m.querySelector(".nm-card").setAttribute("aria-label", "AIS message types");
+  const counts = (lastState && lastState.types) || {};
+  const total = Object.values(counts).reduce((a, b) => a + (+b || 0), 0);
+  const rows = AIS_TYPES.map(([t, name, what]) => {
+    const n = counts[t];
+    const seen = n != null && n > 0;
+    return `<div class="tt-row ${seen ? "tt-seen" : "tt-dim"}">`
+      + `<span class="mono tt-t">${t}</span>`
+      + `<span class="mono tt-n">${seen ? n : "–"}</span>`
+      + `<span class="tt-m">${name}<span class="nm-note">${what}</span></span></div>`;
+  }).join("");
+  $("nmBody").innerHTML =
+      `<div class="nm-h"><div class="nm-title">AIS message types</div></div>`
+    + `<div class="nm-hint">How many messages of each AIS type the station decoded this measurement`
+    + `${total ? ` (${total} total)` : ""}. Types 1/2/3 &amp; 18 put vessels on the map; 5 &amp; 24 fill in their names.</div>`
+    + `<div class="tt-grid"><div class="tt-row tt-head"><span>Type</span><span>Count</span><span>Meaning</span></div>${rows}</div>`;
+  m.hidden = false;
+  $("nmBody").scrollTop = 0;
+}
+$("typesMeta").addEventListener("click", openTypesModal);
+$("typesMeta").addEventListener("keydown", e => {
+  if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTypesModal(); }
+});
 
 /* ---------- tick ---------- */
 function setOffline(msg){
